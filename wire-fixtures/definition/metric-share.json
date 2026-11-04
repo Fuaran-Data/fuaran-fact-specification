@@ -1,0 +1,1 @@
+{"kind":"metricDefinition","wireVersion":1,"id":"share_of_voice","name":"Share of voice","unit":"%","dimensionality":"ratio","direction":"neutral","displayFormat":{"style":"percent","fractionDigits":1,"grouping":false},"staleness":{"kind":"untilSuperseded"},"producingOperation":null,"canonicalMethod":null,"rollUp":{"kind":"nonAdditive"},"context":null}

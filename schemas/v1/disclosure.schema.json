@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "disclosure.schema.json",
+  "title": "Disclosure label (§5.8): data a host carries, never a rule this specification enforces",
+  "oneOf": [
+    { "type": "object", "required": ["kind"], "properties": { "kind": { "const": "surfaceable" } } },
+    { "type": "object", "required": ["kind"], "properties": { "kind": { "const": "internal" } } },
+    {
+      "type": "object",
+      "required": ["kind", "policy"],
+      "properties": {
+        "kind": { "const": "restricted" },
+        "policy": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      }
+    }
+  ]
+}

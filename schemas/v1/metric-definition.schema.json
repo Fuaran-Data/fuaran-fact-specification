@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metric-definition.schema.json",
+  "title": "Metric definition (§7.1)",
+  "type": "object",
+  "required": ["kind", "wireVersion", "id", "name", "unit", "dimensionality", "direction", "displayFormat", "staleness", "producingOperation", "canonicalMethod", "rollUp", "context"],
+  "properties": {
+    "kind": { "const": "metricDefinition" },
+    "wireVersion": { "$ref": "common.schema.json#/$defs/wireVersion" },
+    "id": { "$ref": "common.schema.json#/$defs/definitionId" },
+    "name": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "unit": {
+      "description": "The canonical unit text of a unit in the Fuaran Core unit algebra (§7.2). A pattern cannot check it; the text and the corpus do.",
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "dimensionality": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "direction": { "enum": ["higherIsBetter", "lowerIsBetter", "neutral"] },
+    "displayFormat": {
+      "type": "object",
+      "required": ["style", "fractionDigits", "grouping"],
+      "properties": {
+        "style": { "enum": ["verbatim", "number", "percent", "currency"] },
+        "fractionDigits": { "oneOf": [{ "type": "null" }, { "type": "integer", "minimum": 0, "maximum": 28 }] },
+        "grouping": { "type": "boolean" }
+      }
+    },
+    "staleness": { "$ref": "staleness-policy.schema.json" },
+    "producingOperation": { "$ref": "common.schema.json#/$defs/optionalNonEmptyString" },
+    "canonicalMethod": { "$ref": "common.schema.json#/$defs/optionalNonEmptyString" },
+    "rollUp": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["kind", "tolerance"],
+          "properties": {
+            "kind": { "const": "additive" },
+            "tolerance": { "$ref": "common.schema.json#/$defs/decimal" }
+          }
+        },
+        { "type": "object", "required": ["kind"], "properties": { "kind": { "const": "nonAdditive" } } }
+      ]
+    },
+    "context": { "$ref": "common.schema.json#/$defs/optionalNonEmptyString" }
+  }
+}

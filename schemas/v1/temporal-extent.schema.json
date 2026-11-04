@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "temporal-extent.schema.json",
+  "title": "TemporalExtent (§5.4): the half-open valid time [from, to)",
+  "type": "object",
+  "required": ["from", "to", "label"],
+  "properties": {
+    "from": { "$ref": "common.schema.json#/$defs/instant" },
+    "to": { "$ref": "common.schema.json#/$defs/instant" },
+    "label": { "$ref": "common.schema.json#/$defs/optionalNonEmptyString" }
+  }
+}

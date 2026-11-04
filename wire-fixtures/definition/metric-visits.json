@@ -1,0 +1,1 @@
+{"kind":"metricDefinition","wireVersion":1,"id":"visits","name":"Visits","unit":"1","dimensionality":"count","direction":"higherIsBetter","displayFormat":{"style":"verbatim","fractionDigits":null,"grouping":false},"staleness":{"kind":"untilUpstreamChange"},"producingOperation":null,"canonicalMethod":null,"rollUp":{"kind":"additive","tolerance":"0"},"context":null}

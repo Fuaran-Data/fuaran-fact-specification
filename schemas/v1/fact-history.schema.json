@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fact-history.schema.json",
+  "title": "Fact history (§6.2): facts in the order a store accepted them",
+  "type": "object",
+  "required": ["kind", "wireVersion", "facts"],
+  "properties": {
+    "kind": { "const": "factHistory" },
+    "wireVersion": { "$ref": "common.schema.json#/$defs/wireVersion" },
+    "facts": { "type": "array", "items": { "$ref": "fact.schema.json" } }
+  }
+}

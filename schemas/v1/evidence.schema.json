@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "evidence.schema.json",
+  "title": "Evidence (§5.6): the provenance a fact carries",
+  "type": "object",
+  "required": ["resultRef", "inputHashes", "triggerRef"],
+  "properties": {
+    "resultRef": { "$ref": "common.schema.json#/$defs/optionalNonEmptyString" },
+    "inputHashes": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/nonEmptyString" } },
+    "triggerRef": { "$ref": "common.schema.json#/$defs/optionalNonEmptyString" }
+  }
+}

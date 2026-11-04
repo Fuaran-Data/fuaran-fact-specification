@@ -1,0 +1,1 @@
+{"kind":"metricDefinition","wireVersion":1,"id":"throughput","name":"Throughput","unit":"kg.h-1","dimensionality":"mass-rate","direction":"higherIsBetter","displayFormat":{"style":"number","fractionDigits":0,"grouping":true},"staleness":{"kind":"freshFor","windowSeconds":3600},"producingOperation":null,"canonicalMethod":null,"rollUp":null,"context":null}

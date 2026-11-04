@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "subject-definition.schema.json",
+  "title": "Subject definition (§7.3)",
+  "type": "object",
+  "required": ["kind", "wireVersion", "id", "name", "levels", "calendar"],
+  "properties": {
+    "kind": { "const": "subjectDefinition" },
+    "wireVersion": { "$ref": "common.schema.json#/$defs/wireVersion" },
+    "id": { "$ref": "common.schema.json#/$defs/definitionId" },
+    "name": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "levels": { "type": "array", "minItems": 1, "items": { "$ref": "common.schema.json#/$defs/nonEmptyString" } },
+    "calendar": { "$ref": "common.schema.json#/$defs/optionalNonEmptyString" }
+  }
+}

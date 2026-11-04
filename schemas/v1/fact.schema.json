@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fact.schema.json",
+  "title": "Fact (§5.1)",
+  "type": "object",
+  "required": ["kind", "wireVersion", "id", "subject", "metric", "value", "period", "asOf", "method", "evidence", "confidence", "supersedes", "disclosure"],
+  "properties": {
+    "kind": { "const": "fact" },
+    "wireVersion": { "$ref": "common.schema.json#/$defs/wireVersion" },
+    "id": { "$ref": "common.schema.json#/$defs/factId" },
+    "subject": { "$ref": "subject-ref.schema.json" },
+    "metric": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "value": { "$ref": "fact-value.schema.json" },
+    "period": { "$ref": "temporal-extent.schema.json" },
+    "asOf": { "$ref": "common.schema.json#/$defs/instant" },
+    "method": { "$ref": "method-ref.schema.json" },
+    "evidence": { "$ref": "evidence.schema.json" },
+    "confidence": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["value", "basis"],
+          "properties": {
+            "value": { "$ref": "common.schema.json#/$defs/decimal" },
+            "basis": { "$ref": "common.schema.json#/$defs/optionalNonEmptyString" }
+          }
+        }
+      ]
+    },
+    "supersedes": { "oneOf": [{ "type": "null" }, { "$ref": "common.schema.json#/$defs/factId" }] },
+    "disclosure": { "$ref": "disclosure.schema.json" }
+  }
+}

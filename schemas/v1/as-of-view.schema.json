@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "as-of-view.schema.json",
+  "title": "As-of view (§6.4): the facts of a history visible at an instant",
+  "type": "object",
+  "required": ["kind", "wireVersion", "at", "history", "visible"],
+  "properties": {
+    "kind": { "const": "asOfView" },
+    "wireVersion": { "$ref": "common.schema.json#/$defs/wireVersion" },
+    "at": { "$ref": "common.schema.json#/$defs/instant" },
+    "history": { "$ref": "fact-history.schema.json" },
+    "visible": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/factId" } }
+  }
+}

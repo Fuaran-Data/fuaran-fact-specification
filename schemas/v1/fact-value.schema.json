@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fact-value.schema.json",
+  "title": "FactValue (§5.3): one of six cases, discriminated by kind",
+  "oneOf": [
+    { "$ref": "#/$defs/scalar" },
+    { "$ref": "#/$defs/interval" },
+    { "$ref": "#/$defs/series" },
+    { "$ref": "#/$defs/distribution" },
+    { "$ref": "#/$defs/categorical" },
+    { "$ref": "#/$defs/absent" }
+  ],
+  "$defs": {
+    "scalar": {
+      "type": "object",
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": { "const": "scalar" },
+        "value": { "$ref": "common.schema.json#/$defs/decimal" }
+      }
+    },
+    "interval": {
+      "type": "object",
+      "required": ["kind", "low", "high"],
+      "properties": {
+        "kind": { "const": "interval" },
+        "low": { "$ref": "common.schema.json#/$defs/decimal" },
+        "high": { "$ref": "common.schema.json#/$defs/decimal" }
+      }
+    },
+    "series": {
+      "type": "object",
+      "required": ["kind", "address", "locator"],
+      "properties": {
+        "kind": { "const": "series" },
+        "address": { "$ref": "common.schema.json#/$defs/contentAddress" },
+        "locator": { "$ref": "common.schema.json#/$defs/optionalNonEmptyString" }
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "required": ["kind", "buckets"],
+      "properties": {
+        "kind": { "const": "distribution" },
+        "buckets": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "type": "string", "pattern": "^[^=;]+$" }
+        }
+      }
+    },
+    "categorical": {
+      "type": "object",
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": { "const": "categorical" },
+        "value": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      }
+    },
+    "absent": {
+      "type": "object",
+      "required": ["kind", "reason"],
+      "properties": {
+        "kind": { "const": "absent" },
+        "reason": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      }
+    }
+  }
+}

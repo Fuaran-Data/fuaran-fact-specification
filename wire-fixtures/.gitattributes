@@ -1,0 +1,11 @@
+# A fixture file's BYTES are the document: the manifest records a sha256 over the file itself.
+# Line-ending churn here is corpus corruption, not formatting. The documents carry no newline, so
+# normalisation is a no-op today; this keeps it so by rule, against any broader parent rule.
+*.json -text
+
+# The index is a formatted document for humans, emitted with LF line endings.
+manifest.json text eol=lf
+
+# The emitter, the reader and the checker are ordinary source.
+*.mjs text eol=lf
+*.md  text eol=lf

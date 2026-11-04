@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "subject-registry.schema.json",
+  "title": "Subject registry (§7.4): subject definitions in ascending ordinal id order, ids unique",
+  "type": "object",
+  "required": ["kind", "wireVersion", "subjects"],
+  "properties": {
+    "kind": { "const": "subjectRegistry" },
+    "wireVersion": { "$ref": "common.schema.json#/$defs/wireVersion" },
+    "subjects": { "type": "array", "items": { "$ref": "subject-definition.schema.json" } }
+  }
+}

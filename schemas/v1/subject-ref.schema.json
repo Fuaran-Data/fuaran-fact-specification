@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "subject-ref.schema.json",
+  "title": "SubjectRef (§5.2)",
+  "type": "object",
+  "required": ["hierarchy", "path"],
+  "properties": {
+    "hierarchy": { "type": "string", "pattern": "^[^/]+$" },
+    "path": { "type": "array", "items": { "type": "string", "pattern": "^[^>]+$" } }
+  }
+}

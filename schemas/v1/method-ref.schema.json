@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "method-ref.schema.json",
+  "title": "MethodRef (§5.5): how a fact came to be",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["kind", "operation", "version", "paramHash"],
+      "properties": {
+        "kind": { "const": "computed" },
+        "operation": { "type": "string", "pattern": "^[^:]+$" },
+        "version": { "type": "string", "pattern": "^[^:]+$" },
+        "paramHash": { "type": "string" }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["kind", "principal"],
+      "properties": {
+        "kind": { "const": "humanAsserted" },
+        "principal": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["kind", "certificate"],
+      "properties": {
+        "kind": { "const": "imported" },
+        "certificate": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      }
+    }
+  ]
+}

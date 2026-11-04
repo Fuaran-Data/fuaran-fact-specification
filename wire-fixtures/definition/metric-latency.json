@@ -1,0 +1,1 @@
+{"kind":"metricDefinition","wireVersion":1,"id":"latency.p95","name":"Latency (p95)","unit":"ms","dimensionality":"duration","direction":"lowerIsBetter","displayFormat":{"style":"number","fractionDigits":2,"grouping":true},"staleness":{"kind":"freshFor","windowSeconds":86400},"producingOperation":null,"canonicalMethod":null,"rollUp":null,"context":null}
