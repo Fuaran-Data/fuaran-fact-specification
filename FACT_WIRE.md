@@ -1,6 +1,6 @@
 # Fact wire specification
 
-**Version 1, revision 1.1** (§8). A language-neutral statement of the **Fact**: a verified assertion that a metric of a subject
+**Version 1, revision 1.2** (§8). A language-neutral statement of the **Fact**: a verified assertion that a metric of a subject
 had a value over a period, as known at an instant, made by a stated method from stated inputs. This
 document fixes the record, its encoding, the **identity frame** every host must reproduce byte for
 byte, the four laws a history of facts obeys, the metric and subject **definitions** a host needs to
@@ -144,6 +144,35 @@ method identity is the key's last field.
 None of these may be empty, nor may a metric id, a principal, a certificate reference, an input hash,
 a categorical value or an absence reason (`shape-invalid`). `paramHash` may be empty; it is the last
 part of its rendering.
+
+**Data at rest: a legacy reader's tolerance.** These rules bind every document and every writer: a
+reader refuses a document that breaks one, and a writer MUST NOT produce one, so no new fact carries
+such a token. A host may nevertheless hold facts written before the rules, in a shape of its own that
+is not a document of this specification (`DECISIONS.md` D2 (3)). An implementation that reads that data
+at rest for its host (a **legacy reader**) MAY accept the tokens below there, and only there, applying
+every other rule a reader applies to a fact, the id verification (§4) included. It returns each such fact
+as stored: its id and its lineage key are what the store already holds, recomputed by the frame and the
+key unchanged. This is a reader's tolerance, not a change to the wire: no document that was refused is
+now read, and the corpus's reject vectors for these tokens stand.
+
+| Token at rest | Refused on write | Accepted by a legacy read | Two stored facts can then share |
+|---|---|---|---|
+| `>` in a path member | `token-invalid` | yes | the id and the lineage key: `["a>b"]` and `["a";"b"]` render alike |
+| an empty path member | `shape-invalid` | yes | the id and the lineage key: `[""]` and `[]` render alike, as do `["a";""]` and `["a>"]` |
+| `/` in a hierarchy | `token-invalid` | yes | the id and the lineage key: hierarchy `a/b` with path `["c"]` and hierarchy `a` with path `["b/c"]` |
+| `\|` in a path member, a hierarchy or a metric id | `token-invalid` | yes | the lineage key only, between two facts that each carry one: metric `x\|y`, and path member `…\|x` with metric `y` |
+| `:` in a computed method's operation or version | `token-invalid` | yes | the id and the lineage key: `("a:b", "c", "d")` and `("a", "b", "c:d")` give one method identity |
+| `=` or `;` in a distribution bucket key | `token-invalid` | yes | the id of a `humanAsserted` fact (its value hash, §4.4): `{"a=1;b": 2}` and `{"a": 1, "b": 2}` give one value text; never the lineage key, which holds no value |
+
+Where a row says the id is shared, the other fact can be one a writer accepts today (`["a";"b"]`, the
+empty path, path member `b/c`, paramHash `c:d`, a clean distribution), so a new fact can arrive under
+the id or the key of a stored one. **What a host does about it.** It reads every stored fact as stored and never
+merges two because they render alike. Before it treats an id or a lineage key it holds as naming a fact
+it is about to store (a replay, a supersession, one head per lineage), it compares the members when
+either fact carries a tolerated token, and keeps two facts that differ as two. A host that wants the
+ambiguity gone asserts the stored facts again under tokens this section admits: those are new facts in
+new lineages, a migration of the host's own, which nothing here requires. The `|` rows cannot collide
+with a fact a writer accepts today, because such a fact has no `|` in those members.
 
 ### 3.6 Refusals
 
@@ -452,7 +481,8 @@ occur inside what it separates, so §3.5 refuses `|` in a hierarchy, a path memb
 period rendering never contains `|` and has a fixed length, and the method identity is the last field,
 so with those refused no two different lineages share a key. Without the rule, subject `area/west` with
 metric `revenue|net` and subject `area/west|revenue` with metric `net` would share one key, and a store
-indexing by it would let one supersede the other.
+indexing by it would let one supersede the other. Facts a host held before the rule, and reads through
+a legacy reader (§3.5), can share a key this way; §3.5 says which, and what the host does.
 
 ### 6.2 The history document
 
@@ -656,6 +686,12 @@ mistake, because its lineage key is ambiguous, and no id of any other fact moves
 (§6.1), the rendering standard (§10), the `renderedValue` document and the `rendering-mismatch` class are
 new: a new statement, a new document kind and a new corpus family, which no earlier document is affected
 by.
+
+**What revision 1.2 changed, inside version 1** (`DECISIONS.md` D3). §3.5 states a legacy reader's
+tolerance for the tokens it refuses, on data at rest only, and which stored facts can then render alike:
+a reader's tolerance, not a wire change, since no document's validity moves. The corpus gains two
+`record` reject vectors, so that every refused token has one: additive, as each refuses what was already
+refused.
 
 **The temporal extent moves down to Core.** Core has no period type today, so §5.4 and §3.4 specify
 one here. The first time a Compute phase needs a period (forecasting, sequences), the type moves to

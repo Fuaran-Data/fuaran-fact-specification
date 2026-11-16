@@ -190,6 +190,7 @@ reject("record", "reject-path-pipe", baseText, (t) => t.replace('"widget-x"', '"
 reject("record", "reject-metric-pipe", baseText, (t) => t.replace('"metric":"revenue"', '"metric":"revenue|net"'), "token-invalid");
 reject("record", "reject-path-empty-member", baseText, (t) => t.replace('"widget-x"', '""'), "shape-invalid");
 reject("record", "reject-operation-colon", baseText, (t) => t.replace('"operation":"rollup"', '"operation":"rollup:sum"'), "token-invalid");
+reject("record", "reject-version-colon", baseText, (t) => t.replace('"version":"2"', '"version":"2:1"'), "token-invalid");
 reject("record", "reject-period-inverted", baseText, (t) => t.replace('"from":"2026-04-01T00:00:00Z"', '"from":"2026-07-02T00:00:00Z"'), "period-inverted");
 reject("record", "reject-id-mismatch", baseText, (t) => t.replace(base.id, hex("not-this-fact")), "fact-id-mismatch", { law: "L2" });
 reject("record", "reject-id-uppercase", baseText, (t) => t.replace(base.id, base.id.toUpperCase()), "shape-invalid");
@@ -197,6 +198,7 @@ reject("record", "reject-series-address", F.encode(F.factValueTree(seriesNoHint)
 reject("record", "reject-series-address-truncated", F.encode(F.factValueTree(seriesNoHint)), (t) => t.replace(seriesNoHint.value.address, "sha256:" + hex("weekly-revenue-2026-q2").slice(0, 63)), "shape-invalid");
 reject("record", "reject-interval-inverted", F.encode(F.factValueTree(intervalFact)), (t) => t.replace('"low":"0.42","high":"0.57"', '"low":"0.57","high":"0.42"'), "interval-inverted");
 reject("record", "reject-bucket-key", F.encode(F.factValueTree(assertedWithInputs)), (t) => t.replace('"p10":', '"p=10":'), "token-invalid");
+reject("record", "reject-bucket-key-semicolon", F.encode(F.factValueTree(assertedWithInputs)), (t) => t.replace('"p10":', '"p;10":'), "token-invalid");
 reject("record", "reject-escape-uppercase-hex", F.encode(F.factValueTree(fact({ value: { kind: "categorical", value: "a\u001fb" }, metric: "account_status", method: asserted(), inputs: [] }))), (t) => t.replace("\\u001f", "\\u001F"), "not-canonical");
 // accept — forward compatibility: a member a reader does not know is ignored.
 add("record", "accept-unknown-member", "accept", Buffer.from(baseText.slice(0, -1) + ',"annotation":{"note":"added by a later version"}}', "utf8"), {

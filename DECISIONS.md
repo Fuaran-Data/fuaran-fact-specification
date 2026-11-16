@@ -205,3 +205,42 @@ deployments that schedule differently disagree about a metric's meaning.
 **Which revision.** These changes are revision 1.1 of version 1 (§8). The corpus moved with them: 44 vectors were
 added (an identity vector for a host-key series, seven lineage vectors, four record refusals and 32 rendering
 vectors), and no existing document's bytes or id changed.
+
+## D3 — Revision 1.2: a legacy reader tolerates the refused tokens at rest, and says where facts then collide (Phase 37, 2026-11-16)
+
+D2 kept a host's stored facts readable without migration, and narrowed §3.5 by refusing `|` in a hierarchy, a
+path member and a metric id. The reference package's legacy reader then held a stored fact to every token rule,
+so a fact at rest carrying a token the text refuses (a path member with `>` or `|`, or empty; a hierarchy with `/`
+or `|`; a metric id with `|`; a computed method's operation or version with `:`; a distribution key with `=` or
+`;`) no longer read, and a host whose store held such facts could not adopt without rewriting them, which D2 set
+out to avoid.
+
+**(1) A legacy reader MAY accept these tokens on data at rest, and only there. A reader's tolerance, not a wire
+change.** §3.5 now says so beside its table. Every document is read exactly as before: the rules bind every
+document and every writer, a writer still refuses a fact carrying one of these tokens, and so a new fact cannot
+carry one. The tolerance waives the token rules and nothing else: the id is verified as §4 says, and the fact is
+returned with the id and lineage key its store holds. The text describes no saved shape (D2 (3) stands); it states
+only which tokens such a reader may accept, so that an implementation offering one knows where its tolerance ends.
+
+**(2) Where accepted tokens make two facts render alike, both are returned as stored, and the text says which and
+what a host does.** The renderings are joined, not framed, so a tolerated token can make two different facts give
+one rendering. §3.5's table states it per token: `>`, an empty path member, `/` in a hierarchy and `:` in a method
+member can give two facts one id and one lineage key, and the other fact can be one a writer accepts today; `|`
+can give two stored facts one lineage key, never one id, and never collides with a fact a writer accepts today;
+`=` or `;` in a bucket key can give two `humanAsserted` facts one id and leaves the key alone. A host compares
+members before it treats an id or key hit as the same fact when either carries a tolerated token, and keeps two
+facts as two. Ending the ambiguity is the host's own migration, which nothing requires.
+*Alternatives.* (a) Refuse the facts and require a migration: the outcome D2 set out to prevent, for a defect the
+writer, not the data, should carry. (b) Escape the tokens when computing the key or the id of a tolerated fact:
+that changes the bytes of exactly the keys and ids a store already indexes, and orphans them. (c) Return one fact
+where two collide: a reader that merges is a reader that loses data. (d) Describe the legacy shape and add a
+corpus family for it: conformance is whole-corpus (§2), so every implementation would then have to read a shape
+that is not a document of this text. The facts that pin the tolerance live with the implementation that offers it.
+
+**(3) Every refused token has a reject vector.** `record/reject-version-colon` and
+`record/reject-bucket-key-semicolon` join the seven `token-invalid` record vectors and the empty-path-member vector, so a
+writer that admitted a refused token on the wire fails certification on each one. Additive (§8): each refuses what
+was already refused.
+
+**Which revision.** These changes are revision 1.2 of version 1 (§8). No document's bytes or id changed, and the
+corpus gained the two vectors above.

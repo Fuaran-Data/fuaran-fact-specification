@@ -664,6 +664,14 @@
       "rejectClass": "token-invalid"
     },
     {
+      "id": "record/reject-version-colon",
+      "family": "record",
+      "kind": "reject",
+      "file": "record/reject-version-colon.json",
+      "sha256": "14aca6b5eb2b51574b9e8f4b2da59d48d597291e8020b19dcd1a1e8196be4464",
+      "rejectClass": "token-invalid"
+    },
+    {
       "id": "record/reject-period-inverted",
       "family": "record",
       "kind": "reject",
@@ -718,6 +726,14 @@
       "kind": "reject",
       "file": "record/reject-bucket-key.json",
       "sha256": "62fde8d8651e2b9383b0d9ab4882d87f697d7efabb787112de34faee9e67bbab",
+      "rejectClass": "token-invalid"
+    },
+    {
+      "id": "record/reject-bucket-key-semicolon",
+      "family": "record",
+      "kind": "reject",
+      "file": "record/reject-bucket-key-semicolon.json",
+      "sha256": "2467bb05bde6b578c8a3e50bd08d6ed8f887d8609f8b7d1f4816a78f1bdcd27a",
       "rejectClass": "token-invalid"
     },
     {
