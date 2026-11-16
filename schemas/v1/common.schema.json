@@ -9,6 +9,12 @@
     "optionalNonEmptyString": { "type": ["string", "null"], "minLength": 1 },
     "factId": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "contentAddress": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "seriesAddress": {
+      "description": "A series address (§5.3): a sha256 content address, or an opaque host key that is not in a content-hash form. The text, not this schema, draws the line between the two.",
+      "type": "string",
+      "minLength": 1
+    },
+    "metricId": { "type": "string", "pattern": "^[^|]+$" },
     "decimal": {
       "description": "Decimal text (§3.3): the text is the value, and its scale is significant.",
       "type": "string",

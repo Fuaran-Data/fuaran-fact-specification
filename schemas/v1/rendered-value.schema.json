@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rendered-value.schema.json",
+  "title": "Rendered value (§10.6): a value, the metric it is shown under, and the text the rendering rule gives",
+  "type": "object",
+  "required": ["kind", "wireVersion", "rule", "metric", "value", "text"],
+  "properties": {
+    "kind": { "const": "renderedValue" },
+    "wireVersion": { "$ref": "common.schema.json#/$defs/wireVersion" },
+    "rule": { "type": "integer", "const": 1 },
+    "metric": { "oneOf": [{ "type": "null" }, { "$ref": "metric-definition.schema.json" }] },
+    "value": { "$ref": "fact-value.schema.json" },
+    "text": { "type": "string" }
+  }
+}

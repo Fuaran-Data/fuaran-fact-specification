@@ -33,7 +33,7 @@
       "required": ["kind", "address", "locator"],
       "properties": {
         "kind": { "const": "series" },
-        "address": { "$ref": "common.schema.json#/$defs/contentAddress" },
+        "address": { "$ref": "common.schema.json#/$defs/seriesAddress" },
         "locator": { "$ref": "common.schema.json#/$defs/optionalNonEmptyString" }
       }
     },

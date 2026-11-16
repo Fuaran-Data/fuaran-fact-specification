@@ -32,6 +32,7 @@ export const REJECT_CLASSES = [
   "supersedes-missing",
   "view-mismatch",
   "status-mismatch",
+  "rendering-mismatch",
 ];
 
 export class Refusal extends Error {
@@ -221,6 +222,18 @@ function head(ctx, v, at, kind) {
 
 const FACT_ID = /^[0-9a-f]{64}$/;
 const CONTENT_ADDRESS = /^sha256:[0-9a-f]{64}$/;
+/** §4.5 the content-hash form, any algorithm. */
+const CONTENT_HASH = /^[a-z0-9]+:(?:[0-9a-f]{2}){16,}$/;
+/**
+ * §5.3 what a series address is: a "contentAddress" (sha256: and 64 hex), a "hostKey" (any other
+ * non-empty string that is not in the content-hash form and does not begin with sha256:), or null
+ * for text that looks like a content hash and is not a sha256 content address.
+ */
+export function seriesAddressKind(address) {
+  if (CONTENT_ADDRESS.test(address)) return "contentAddress";
+  if (CONTENT_HASH.test(address) || address.startsWith("sha256:")) return null;
+  return "hostKey";
+}
 export const DEFINITION_ID = /^[a-z0-9][a-z0-9._-]*$/;
 
 // ── §5 the Fact record ───────────────────────────────────────────────────────────────────────
@@ -229,10 +242,10 @@ const FACT_MEMBERS = ["kind", "wireVersion", "id", "subject", "metric", "value",
 function readSubject(ctx, v, at) {
   members(ctx, v, at, ["hierarchy", "path"]);
   const hierarchy = str(v.hierarchy, `${at}.hierarchy`, { nonEmpty: true });
-  if (hierarchy.includes("/")) refuse("token-invalid", `${at}.hierarchy: '${hierarchy}' contains '/'`);
+  for (const sep of ["/", "|"]) if (hierarchy.includes(sep)) refuse("token-invalid", `${at}.hierarchy: '${hierarchy}' contains '${sep}'`);
   const path = arr(v.path, `${at}.path`).map((p, i) => {
     const s = str(p, `${at}.path[${i}]`, { nonEmpty: true });
-    if (s.includes(">")) refuse("token-invalid", `${at}.path[${i}]: '${s}' contains '>'`);
+    for (const sep of [">", "|"]) if (s.includes(sep)) refuse("token-invalid", `${at}.path[${i}]: '${s}' contains '${sep}'`);
     return s;
   });
   return { hierarchy, path };
@@ -254,8 +267,9 @@ function readValue(ctx, v, at) {
     }
     case "series":
       members(ctx, v, at, ["kind", "address", "locator"]);
-      str(v.address, `${at}.address`);
-      if (!CONTENT_ADDRESS.test(v.address)) refuse("shape-invalid", `${at}.address: '${v.address}' is not a sha256 content address`);
+      str(v.address, `${at}.address`, { nonEmpty: true });
+      if (seriesAddressKind(v.address) === null)
+        refuse("shape-invalid", `${at}.address: '${v.address}' is in a content-hash form but is not a sha256 content address`);
       return { kind, address: v.address, locator: optStr(v.locator, `${at}.locator`, { nonEmpty: true }) };
     case "distribution": {
       members(ctx, v, at, ["kind", "buckets"]);
@@ -334,6 +348,12 @@ function readDisclosure(ctx, v, at) {
   return { kind };
 }
 
+function readMetricId(v, at) {
+  const metric = str(v, at, { nonEmpty: true });
+  if (metric.includes("|")) refuse("token-invalid", `${at}: '${metric}' contains '|'`);
+  return metric;
+}
+
 function readFactRecord(ctx, v, at) {
   obj(v, at);
   head(ctx, v, at, "fact");
@@ -343,7 +363,7 @@ function readFactRecord(ctx, v, at) {
   const fact = {
     id,
     subject: readSubject(ctx, v.subject, `${at}.subject`),
-    metric: str(v.metric, `${at}.metric`, { nonEmpty: true }),
+    metric: readMetricId(v.metric, `${at}.metric`),
     value: readValue(ctx, v.value, `${at}.value`),
     period: readPeriod(ctx, v.period, `${at}.period`),
     asOf: parseInstant(v.asOf, `${at}.asOf`),
@@ -405,29 +425,30 @@ export function identityFields(f) {
   ];
 }
 export const factId = (f) => sha256Hex(frameText(identityFields(f)));
-/** §6.1 the lineage key, as a tuple compared member for member. */
-export const lineageKey = (f) => [subjectRendering(f.subject), f.metric, periodRendering(f.period), methodIdentity(f.method)];
-export const sameLineage = (a, b) => lineageKey(a).every((x, i) => x === lineageKey(b)[i]);
+/** §6.1 the lineage key: the four renderings joined by `|`; and its digest, what a store indexes. */
+export const lineageKey = (f) => [subjectRendering(f.subject), f.metric, periodRendering(f.period), methodIdentity(f.method)].join("|");
+export const lineageDigest = (f) => sha256Hex(lineageKey(f));
+export const sameLineage = (a, b) => lineageKey(a) === lineageKey(b);
 
 // ── the canonical form of each record (§5, §7) ───────────────────────────────────────────────
+export function valueTree(v) {
+  switch (v.kind) {
+    case "scalar":
+      return new Rec([["kind", "scalar"], ["value", v.value]]);
+    case "interval":
+      return new Rec([["kind", "interval"], ["low", v.low], ["high", v.high]]);
+    case "series":
+      return new Rec([["kind", "series"], ["address", v.address], ["locator", v.locator]]);
+    case "distribution":
+      return new Rec([["kind", "distribution"], ["buckets", new Map(v.buckets)]]);
+    case "categorical":
+      return new Rec([["kind", "categorical"], ["value", v.value]]);
+    case "absent":
+      return new Rec([["kind", "absent"], ["reason", v.reason]]);
+  }
+}
 export function factValueTree(f) {
-  const value = (() => {
-    const v = f.value;
-    switch (v.kind) {
-      case "scalar":
-        return new Rec([["kind", "scalar"], ["value", v.value]]);
-      case "interval":
-        return new Rec([["kind", "interval"], ["low", v.low], ["high", v.high]]);
-      case "series":
-        return new Rec([["kind", "series"], ["address", v.address], ["locator", v.locator]]);
-      case "distribution":
-        return new Rec([["kind", "distribution"], ["buckets", new Map(v.buckets)]]);
-      case "categorical":
-        return new Rec([["kind", "categorical"], ["value", v.value]]);
-      case "absent":
-        return new Rec([["kind", "absent"], ["reason", v.reason]]);
-    }
-  })();
+  const value = valueTree(f.value);
   const m = f.method;
   const method =
     m.kind === "computed"
@@ -582,12 +603,12 @@ function readHistory(ctx, v, at) {
 /** L1 and L3, read in acceptance order. L2 is each fact's own id check. */
 export function checkHistory(facts, at = "history") {
   const seen = new Map();
-  const heads = new Map(); // lineage key (framed, so unambiguous) -> the lineage's current head
+  const heads = new Map(); // lineage key -> the lineage's current head
   facts.forEach((f, i) => {
     const where = `${at}.facts[${i}]`;
     if (seen.has(f.id)) refuse("history-id-repeated", `${where}: id ${f.id} was accepted at facts[${seen.get(f.id)}]`);
     seen.set(f.id, i);
-    const key = frameText(lineageKey(f));
+    const key = lineageKey(f);
     const current = heads.get(key);
     if (f.supersedes !== null) {
       const p = facts.slice(0, i).find((g) => g.id === f.supersedes);
@@ -628,7 +649,7 @@ function readStaleness(ctx, v, at) {
 }
 
 // ── top-level documents ──────────────────────────────────────────────────────────────────────
-export const DOCUMENT_KINDS = ["fact", "metricDefinition", "subjectDefinition", "metricRegistry", "subjectRegistry", "factHistory", "asOfView", "factStatus"];
+export const DOCUMENT_KINDS = ["fact", "metricDefinition", "subjectDefinition", "metricRegistry", "subjectRegistry", "factHistory", "asOfView", "factStatus", "renderedValue"];
 
 /**
  * Read a document's bytes. Returns { kind, value, tree, unknown } or throws a Refusal. `tree` is
@@ -706,6 +727,21 @@ export function readDocument(bytes) {
       if (fresh !== derivedFresh) refuse("status-mismatch", `$.fresh: states ${fresh}, the policy gives ${derivedFresh}`);
       value = { fact, staleness, current, at, forecast, fresh };
       tree = statusTree(value);
+      break;
+    }
+    case "renderedValue": {
+      obj(raw, "$");
+      head(ctx, raw, "$", "renderedValue");
+      members(ctx, raw, "$", ["kind", "wireVersion", "rule", "metric", "value", "text"]);
+      if (!Number.isInteger(raw.rule)) refuse("shape-invalid", "$.rule: expected an integer");
+      if (raw.rule !== RENDERING_RULE) refuse("version-unsupported", `$.rule: rendering rule ${raw.rule}`);
+      const metric = raw.metric === null ? null : readMetricDefinition(ctx, raw.metric, "$.metric");
+      const v = readValue(ctx, raw.value, "$.value");
+      const text = str(raw.text, "$.text");
+      const derived = renderValue(metric, v);
+      if (text !== derived) refuse("rendering-mismatch", `$.text: states '${text}', rule ${RENDERING_RULE} gives '${derived}'`);
+      value = { rule: raw.rule, metric, value: v, text };
+      tree = renderedValueTree(value);
       break;
     }
   }
@@ -858,3 +894,106 @@ export function currencyOf(unitText) {
   const [symbol] = factors[0][0].split("|");
   return isCurrencyAtom(symbol) ? symbol : null;
 }
+
+// ── §10 the rendering standard, rule 1 ───────────────────────────────────────────────────────
+export const RENDERING_RULE = 1;
+/** §10.4 the currency prefixes — the whole table; any other code is written as itself and a space. */
+export const CURRENCY_SYMBOLS = new Map([
+  ["AUD", "A$"], ["BRL", "R$"], ["CAD", "CA$"], ["CNY", "CN¥"], ["EUR", "€"], ["GBP", "£"], ["HKD", "HK$"], ["ILS", "₪"],
+  ["INR", "₹"], ["JPY", "¥"], ["KRW", "₩"], ["MXN", "MX$"], ["NZD", "NZ$"], ["PHP", "₱"], ["TWD", "NT$"], ["USD", "$"], ["VND", "₫"],
+]);
+const currencyPrefix = (code) => CURRENCY_SYMBOLS.get(code) ?? code + " ";
+
+/** The currency a unit is, as { code, prefix } (`k[GBP]` is { code: "GBP", prefix: "k" }), or null. */
+export function currencyParts(unitText) {
+  let factors;
+  try {
+    factors = [...parseUnit(unitText)].filter(([, e]) => e !== 0);
+  } catch {
+    return null;
+  }
+  if (factors.length !== 1 || factors[0][1] !== 1) return null;
+  const [symbol, prefix] = factors[0][0].split("|");
+  return isCurrencyAtom(symbol) ? { code: symbol.slice(1, 4), prefix } : null;
+}
+
+/** §10.2 the value moved `shiftLeft` places left, rounded half away from zero to `digits` places. */
+function rounded(text, shiftLeft, digits) {
+  const { coefficient, scale } = parseDecimal(text, "value");
+  const negative = coefficient < 0n;
+  const magnitude = negative ? -coefficient : coefficient;
+  const e = digits + shiftLeft - scale;
+  let q;
+  if (e >= 0) q = magnitude * 10n ** BigInt(e);
+  else {
+    const divisor = 10n ** BigInt(-e);
+    q = magnitude / divisor;
+    if ((magnitude % divisor) * 2n >= divisor) q += 1n;
+  }
+  return { negative: negative && q !== 0n, q };
+}
+
+/** §10.2 the digits of `q` at `digits` places: `.` before the fraction, `,` between groups of three. */
+function digitsText(q, digits, grouping) {
+  const t = q.toString().padStart(digits + 1, "0");
+  let whole = t.slice(0, t.length - digits);
+  const fraction = t.slice(t.length - digits);
+  if (grouping && whole.length > 3) {
+    const first = whole.length % 3;
+    const parts = first > 0 ? [whole.slice(0, first)] : [];
+    for (let i = first; i < whole.length; i += 3) parts.push(whole.slice(i, i + 3));
+    whole = parts.join(",");
+  }
+  return digits === 0 ? whole : whole + "." + fraction;
+}
+
+/** §10.3 one quantity under a display format, for a metric in `unitText`. */
+export function renderQuantity(text, format, unitText) {
+  const { style, fractionDigits: n, grouping } = format;
+  switch (style) {
+    case "verbatim":
+      return text;
+    case "number": {
+      const r = rounded(text, 0, n);
+      return (r.negative ? "-" : "") + digitsText(r.q, n, grouping);
+    }
+    case "percent": {
+      const r = rounded(text, 2, n);
+      return (r.negative ? "-" : "") + digitsText(r.q, n, grouping) + "%";
+    }
+    case "currency": {
+      const r = rounded(text, 0, n);
+      const c = currencyParts(unitText);
+      return (r.negative ? "-" : "") + currencyPrefix(c.code) + digitsText(r.q, n, grouping) + c.prefix;
+    }
+  }
+}
+
+/** §10.5 a value shown as its metric declares, or every quantity verbatim with no metric. */
+export function renderValue(metric, v) {
+  const q = (t) => (metric === null ? t : renderQuantity(t, metric.displayFormat, metric.unit));
+  switch (v.kind) {
+    case "scalar":
+      return q(v.value);
+    case "interval":
+      return `${q(v.low)} to ${q(v.high)}`;
+    case "series":
+      return `series ${v.address}`;
+    case "distribution":
+      return [...v.buckets.keys()].sort(ordinal).map((k) => `${k}: ${q(v.buckets.get(k))}`).join("; ");
+    case "categorical":
+      return v.value;
+    case "absent":
+      return `absent (${v.reason})`;
+  }
+}
+
+export const renderedValueTree = (r) =>
+  new Rec([
+    ["kind", "renderedValue"],
+    ["wireVersion", WIRE_VERSION],
+    ["rule", r.rule],
+    ["metric", r.metric === null ? null : metricDefinitionTree(r.metric)],
+    ["value", valueTree(r.value)],
+    ["text", r.text],
+  ]);

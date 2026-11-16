@@ -9,7 +9,7 @@
     "wireVersion": { "$ref": "common.schema.json#/$defs/wireVersion" },
     "id": { "$ref": "common.schema.json#/$defs/factId" },
     "subject": { "$ref": "subject-ref.schema.json" },
-    "metric": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "metric": { "$ref": "common.schema.json#/$defs/metricId" },
     "value": { "$ref": "fact-value.schema.json" },
     "period": { "$ref": "temporal-extent.schema.json" },
     "asOf": { "$ref": "common.schema.json#/$defs/instant" },

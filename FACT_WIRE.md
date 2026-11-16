@@ -1,10 +1,10 @@
 # Fact wire specification
 
-**Version 1.** A language-neutral statement of the **Fact**: a verified assertion that a metric of a subject
+**Version 1, revision 1.1** (§8). A language-neutral statement of the **Fact**: a verified assertion that a metric of a subject
 had a value over a period, as known at an instant, made by a stated method from stated inputs. This
 document fixes the record, its encoding, the **identity frame** every host must reproduce byte for
-byte, the four laws a history of facts obeys, and the metric and subject **definitions** a host needs to
-read a value. The executable half is [`wire-fixtures/`](wire-fixtures/README.md): an implementation
+byte, the four laws a history of facts obeys, the metric and subject **definitions** a host needs to
+read a value, and the one **rendering** of a value every host shows and compares. The executable half is [`wire-fixtures/`](wire-fixtures/README.md): an implementation
 certifies by reading, re-encoding, re-hashing and refusing the documents it lists. Where this prose and
 the corpus disagree, that is a defect in this document; the corpus is the tie-breaker until the text is
 fixed.
@@ -19,7 +19,7 @@ says so (§9.1).
 **Key words.** MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are used in the RFC 2119 sense.
 
 **Section map.** §1 scope, §2 conformance scope, §3 canonical encoding, §4 identity, §5 the Fact
-record, §6 the laws, §7 definitions and registries, §8 versioning, §9 certifying. Appendix A is the
+record, §6 the laws, §7 definitions and registries, §8 versioning, §9 certifying, §10 rendering. Appendix A is the
 implementation checklist; Appendix B is non-normative.
 
 ---
@@ -29,13 +29,15 @@ implementation checklist; Appendix B is non-normative.
 **In scope.** The Fact record and its value, method, temporal extent, subject and metric references,
 evidence, confidence and disclosure label (§5); the identity frame and the input-hash form (§4); the
 lineage key, supersession, as-of visibility, forecastness and freshness (§6); metric and subject
-definitions, and the registry documents that list them (§7).
+definitions, and the registry documents that list them (§7); and the rendering standard, the one text
+a value is shown as under its metric's display format (§10).
 
 **Out of scope, deliberately.** Where facts are stored and how; who may see a fact, and the enforcement
 of any disclosure label; queries over populations of facts; signatures over a fact or a set of facts;
-and how a value is presented. A Fact is portable data. Storing it, guarding it and showing it are a
-host's business, and nothing here constrains how a host does them, except that what it exchanges as a
-Fact reads as one under this document.
+and how a value is laid out on a screen beyond its rendered text. A Fact is portable data. Storing it,
+guarding it and showing it are a host's business, and nothing here constrains how a host does them,
+except that what it exchanges as a Fact reads as one under this document, and that the text it renders
+a value as, and compares a quoted value against, is §10's.
 
 **Disclosure labels are data.** A fact carries a label (§5.8) from the moment it is made, and a host
 that receives one MUST keep it with the fact. This specification states what the labels are and how
@@ -68,8 +70,8 @@ bytes. The rules are stated in full rather than delegated to a library.
 6. **Strings** escape `"` as `\"`, `\` as `\\`, U+0008 `\b`, U+0009 `\t`, U+000A `\n`, U+000C `\f`,
    U+000D `\r`, and every other character below U+0020 as `\u00` and two **lower-case** hex digits.
    Every other character, all of non-ASCII included, is written literally.
-7. **Integers** are JSON numbers with no sign, fraction or exponent. Only three members are integers:
-   `wireVersion`, `windowSeconds` and `fractionDigits`.
+7. **Integers** are JSON numbers with no sign, fraction or exponent. Only four members are integers:
+   `wireVersion`, `windowSeconds`, `fractionDigits` and a rendered value's `rule` (§10.6).
 8. **No other number appears on the wire.** A quantity is decimal text (§3.3); an instant is text
    (§3.4).
 9. **Booleans** are `true` and `false`.
@@ -125,15 +127,19 @@ an offset (`+00:00`), no zone, a trailing zero (`.500`), an eighth fractional di
 
 ### 3.5 Tokens inside identity
 
-Four kinds of string are joined with separators inside the identity frame (§4.3), so the separator
-cannot appear inside them:
+Five kinds of string are joined with separators inside the identity frame's renderings (§4.3) or the
+lineage key (§6.1), so the separator cannot appear inside them:
 
 | Member | MUST NOT contain | Else |
 |---|---|---|
-| `subject.hierarchy` | `/` | `token-invalid` |
-| each `subject.path` member | `>` | `token-invalid` |
+| `subject.hierarchy` | `/` or `\|` | `token-invalid` |
+| each `subject.path` member | `>` or `\|` | `token-invalid` |
+| `metric` (a fact's metric id) | `\|` | `token-invalid` |
 | `method.operation`, `method.version` (Computed) | `:` | `token-invalid` |
 | each distribution bucket key | `=` or `;` | `token-invalid` |
+
+The `|` rows are what make the lineage key unambiguous (§6.1). A method's members may contain `|`: the
+method identity is the key's last field.
 
 None of these may be empty, nor may a metric id, a principal, a certificate reference, an input hash,
 a categorical value or an absence reason (`shape-invalid`). `paramHash` may be empty; it is the last
@@ -149,7 +155,7 @@ names its class; refusing it for another is not a pass.
 | `not-canonical` | The bytes are not the canonical encoding of the document they read as (§3.1), or are not UTF-8. |
 | `shape-invalid` | Not JSON; a member missing or of the wrong type; an empty string where §3.5 forbids one; an id, address or enumeration outside its form. |
 | `kind-unknown` | A document or tagged-shape `kind` this version does not define. |
-| `version-unsupported` | `wireVersion` is an integer other than `1`. |
+| `version-unsupported` | `wireVersion` is an integer other than `1`, or a rendered value names a rendering rule this version does not define (§10.1). |
 | `decimal-invalid` | §3.3; also a negative roll-up tolerance. |
 | `instant-invalid` | §3.4. |
 | `token-invalid` | §3.5; a definition id outside §7.1's grammar. |
@@ -167,6 +173,7 @@ names its class; refusing it for another is not a pass.
 | `supersedes-missing` | A fact joins a lineage that has a head and supersedes nothing (L3). |
 | `view-mismatch` | An as-of view's `visible` list is not the one §6.4 derives. |
 | `status-mismatch` | A fact status states a forecastness or freshness §6.5–§6.6 do not derive. |
+| `rendering-mismatch` | A rendered value's `text` is not the text §10 renders its value as (§10.6). |
 
 Checks run in the order the record declares its members, each member's own form before the relations
 between members, and a fact's id last; the corpus never needs more than one class to apply.
@@ -231,7 +238,7 @@ value's **value text**:
 |---|---|
 | scalar | `scalar:` + the decimal text |
 | interval | `interval:` + low + `:` + high |
-| series | `series:` + the content address (the locator is not in it) |
+| series | `series:` + the address, a content address or a host key, as carried (the locator is not in it) |
 | distribution | `dist:` + each bucket as key + `=` + decimal text, in ascending ordinal key order, joined by `;` |
 | categorical | `cat:` + the value |
 | absent | `absent:` + the reason |
@@ -309,8 +316,8 @@ The Fact frame is **not** that: it is the length-prefixed frame of §4.1 over a 
 fact id is bare hex. Over the list `["ab","c"]` the Fact frame hashes `2:ab1:c` and a canonical JSON
 rendering would hash `["ab","c"]`, so the two never agree. The Fact frame is specified here, in full,
 because ids minted under it are already held by stores and cited by signed artefacts, and changing the
-frame would re-mint every one of them (`DECISIONS.md` D1, ruling 2). Where this specification needs a content
-address of its own — a series (§5.3) — it uses Core's form.
+frame would re-mint every one of them (`DECISIONS.md` D1, ruling 2). Where this specification names a body of
+data by its content — a series (§5.3) — it uses Core's form.
 
 ## 5. The Fact record
 
@@ -322,7 +329,7 @@ address of its own — a series (§5.3) — it uses Core's form.
 | 2 | `wireVersion` | integer `1` | |
 | 3 | `id` | 64 lower-case hex digits | §4; verified, never trusted |
 | 4 | `subject` | SubjectRef | §5.2 |
-| 5 | `metric` | string, non-empty | a metric id; resolves against a metric registry where the host has one (§7.6) |
+| 5 | `metric` | string, non-empty, without `\|` | a metric id; resolves against a metric registry where the host has one (§7.6) |
 | 6 | `value` | FactValue | §5.3 |
 | 7 | `period` | TemporalExtent | §5.4; **valid time** |
 | 8 | `asOf` | instant | **transaction time**: when the fact was accepted (§6) |
@@ -349,12 +356,23 @@ total over every member. §3.5 constrains both.
 | `categorical` | `value` (string) | a label |
 | `absent` | `reason` (string) | the queryable absence of a value, and why |
 
-**A series names a content address any host can resolve and verify.** `address` is `sha256:` and 64
-lower-case hex digits — the content-address form of `Fuaran.Core.ContentAddress` — over the bytes of
-the series as stored. `locator` is an optional, host-specific hint for where those bytes may be found
-(a store's own version key, a path); it is `null` or a non-empty string, and it is **never part of
-identity** (§4.6). A reader that cannot use a locator ignores it; a reader that fetches by it verifies
-what it fetched against `address`.
+**A series is named by its address, which is one of two forms, told apart by its text alone.**
+
+- A **content address**: `sha256:` and 64 lower-case hex digits — the content-address form of
+  `Fuaran.Core.ContentAddress` — over the bytes of the series as stored. Any host can resolve and verify
+  it. A producer that can address its series by content SHOULD.
+- A **host key**: any other non-empty string that is **not** in the content-hash form of §4.5 and does
+  not begin with `sha256:` — a store's own version key for the data, such as `objects/weekly-revenue@v14`.
+  It is opaque: only the host that minted it can resolve it, and nothing verifies what it names. It is
+  how a store that keyed its series by version before content addresses existed keeps every fact it
+  holds, and every id it minted, unchanged.
+
+Text in a content-hash form that is not a sha256 content address (`sha1:…`, or `sha256:` with the wrong
+number of digits) is neither, and is refused (`shape-invalid`), so a malformed address is never read as a
+host key. Either form enters the value text as carried (§4.4). `locator` is an optional, host-specific
+hint for where the series' bytes may be found (a store's own version key, a path); it is `null` or a
+non-empty string, and it is **never part of identity** (§4.6). A reader that cannot use a locator
+ignores it; a reader that fetches by it verifies what it fetched against a content address.
 
 ### 5.4 TemporalExtent
 
@@ -404,11 +422,37 @@ producer of a draft. It is outside identity, so the id a producer computes is th
 
 ### 6.1 The lineage key
 
-Two facts are in **one lineage** exactly when their subject renderings, metric ids, period renderings
-and method identities (§4.3) are each equal. The input hashes, the value and everything §4.6 lists are
-not in the key. So a new input or a new value supersedes **within** a lineage, while a method with
-another operation, version or parameter hash, or another principal, starts a **competing** lineage: two
-methods computing one subject, metric and period are two current facts, and are never merged.
+A fact's **lineage key** is its subject rendering, its metric id, its period rendering and its method
+identity (§4.3), joined in that order by `|`:
+
+```
+<subject>|<metric>|<period>|<method>
+```
+
+Two facts are in **one lineage** exactly when their lineage keys are equal. The input hashes, the value
+and everything §4.6 lists are not in the key. So a new input or a new value supersedes **within** a
+lineage, while a method with another operation, version or parameter hash, or another principal, starts
+a **competing** lineage: two methods computing one subject, metric and period are two current facts, and
+are never merged.
+
+**The key is text a store indexes.** A host that keeps one head per lineage MAY hold the **lineage
+digest** — the SHA-256 of the key's UTF-8 bytes, as 64 lower-case hex digits with no prefix — and when it
+holds one, it holds that digest, so two hosts index one lineage alike. `identity/computed-scalar`'s key is
+
+```
+product/acme>widget-x|revenue|2026-04-01T00:00:00.0000000Z..2026-07-01T00:00:00.0000000Z|computed:rollup:2:sha256:ffaf48da5032d34dffdd6cbd98f6190bfb534d309c233e434cfbf0c0b4314d51
+```
+
+and the corpus's `lineage` family pins the key and its digest for one fact of each value kind and
+method.
+
+**Why a separator is safe here.** The key is joined by a separator, not framed as §4.1 frames the id,
+because the joined form is the one stores already hold. A separator is unambiguous only if it cannot
+occur inside what it separates, so §3.5 refuses `|` in a hierarchy, a path member and a metric id. The
+period rendering never contains `|` and has a fixed length, and the method identity is the last field,
+so with those refused no two different lineages share a key. Without the rule, subject `area/west` with
+metric `revenue|net` and subject `area/west|revenue` with metric `net` would share one key, and a store
+indexing by it would let one supersede the other.
 
 ### 6.2 The history document
 
@@ -531,9 +575,9 @@ shown, independent of any host's formatting library:
 | `currency` | the value rounded likewise, with the unit's currency | 0–28 | as `number` |
 
 `verbatim` with digits or grouping, another style without `fractionDigits`, or `currency` over a unit
-that is not one currency (§7.2) is refused (`display-format-invalid`). The decimal and grouping
-separators, and the currency's symbol, are the reader's locale's; the specification fixes the number,
-not the glyphs.
+that is not one currency (§7.2) is refused (`display-format-invalid`). The text a format renders a value
+as — its rounding, its digits, its glyphs, its sign and its currency prefix — is §10's rendering
+standard, and is the same on every host.
 
 ### 7.2 Units come from Core
 
@@ -550,6 +594,15 @@ not a unit, `[GBP]` is; `kg.h-1` parses and is written `kg/h`. A dimensionless c
 (`[GBP]`, `k[GBP]`), so a metric definition has no separate currency member: a metric is in a currency
 exactly when its unit is that currency to the first power, optionally prefixed, and nothing else. Two
 units compare by text; how one relates to another (`k[GBP]` to `[GBP]`) is Core's to say.
+
+**The units a metric may declare** are exactly Core's admitted subset: the SI base units and coherent
+derived units with the SI prefixes; `L`, `t` and `bar`; `min`, `h`, `d`, `wk` and `a`; `%`, `[ppm]` and
+`[ppb]`; the international customary units of length and mass; every ISO 4217 currency in brackets; their
+products, quotients and integer powers; and `1`, the dimensionless count. Nothing outside that subset is
+a unit here, and a word such as `count` or `items` is not unit text (`unit-invalid`). **Core admits no
+unit of information**, so a quantity of bytes is a count: a metric that counts bytes declares `1` and
+says so in its `context`. When Core admits a byte unit, a metric may declare it, and doing so changes
+that metric's definition and its digest (§7.5).
 
 ### 7.3 Subject definition
 
@@ -588,9 +641,21 @@ definition's, so a change to one is a change to the definition, visible as a cha
 `wireVersion` is `1`. A change is **additive** when every document valid under the previous text is
 valid under the new one and reads the same: a new optional record member (read leniently by older
 readers, §3.2), a new reject class for something previously accepted only by mistake, a new corpus
-family. Every other change is **breaking**: a new tagged case, a change to the frame, a rendering, a
-value text or a law, a new required member. A breaking change moves `wireVersion`. **A change to the
-identity frame, its renderings or the value texts re-mints ids**, and is not made inside a version.
+family. Every other change is **breaking**: a new tagged case, a change to the frame, an identity
+rendering, a value text or a law, a new required member. A breaking change moves `wireVersion`. **A change
+to the identity frame, its renderings or the value texts re-mints ids**, and is not made inside a version.
+
+**The rendering standard has a version of its own** (§10.1). A change to how a value is shown is a new
+rendering rule, not a new `wireVersion`, because no document's bytes and no id depend on it; an earlier
+rule is never redefined.
+
+**What revision 1.1 of this text changed, inside version 1** (`DECISIONS.md` D2). A series address may be
+a host key (§5.3): additive, since every document valid before is valid and reads the same. `|` is
+refused in a hierarchy, a path member and a metric id (§3.5): a document that carried one was accepted by
+mistake, because its lineage key is ambiguous, and no id of any other fact moves. The lineage key's text
+(§6.1), the rendering standard (§10), the `renderedValue` document and the `rendering-mismatch` class are
+new: a new statement, a new document kind and a new corpus family, which no earlier document is affected
+by.
 
 **The temporal extent moves down to Core.** Core has no period type today, so §5.4 and §3.4 specify
 one here. The first time a Compute phase needs a period (forecasting, sequences), the type moves to
@@ -620,6 +685,7 @@ ordinary `reject` vectors and its positive vectors ordinary `round-trip` vectors
 | Family | `digest` | Recomputed from |
 |---|---|---|
 | `identity` | the fact id, §4 | the fact's own members |
+| `lineage` | the lineage digest, §6.1; the vector also states the `lineageKey` itself, and both are checked | the fact's own members |
 | `definition`, `registry` | the definition digest, §7.5 | the document's bytes |
 
 ### 9.3 Relations
@@ -642,11 +708,103 @@ emitter and the corpus in one change**, and `pwsh ./run.ps1` passes over the res
 ### 9.6 Document kinds and schemas
 
 `fact`, `metricDefinition`, `subjectDefinition`, `metricRegistry`, `subjectRegistry`, `factHistory`,
-`asOfView`, `factStatus` — each has a JSON Schema under `schemas/v1/`, and so do the subject
+`asOfView`, `factStatus`, `renderedValue` — each has a JSON Schema under `schemas/v1/`, and so do the subject
 reference, value, temporal extent, method, evidence, disclosure label and staleness policy (§5,
 §7.1). The schemas are **structural and subordinate**: what a pattern cannot express (a
 decimal's range, a calendar date, unit text, the identity frame, the laws) is stated here and pinned by
 the corpus. A document can pass its schema and still be refused.
+
+## 10. Rendering
+
+A value shown to a person, or quoted in text that a host later checks against the facts it cites, is
+shown as **one** text: the one this section gives it under its metric's display format (§7.1). Two hosts
+that render one value under one metric definition produce the same characters, so a quotation checked on
+one host checks on the other. A host MAY show a reader a localised form, but that form is not the
+rendering, and a host never compares a quotation against it.
+
+### 10.1 The rendering rule
+
+This section is **rendering rule 1**. A record that keeps a rendering for later checking — a
+certificate over a narrative, a cached answer — records the rule it was rendered under, as the integer
+`1`, and a host checks it under the rule it records. A change to any rendering here is a **new rule
+number**, stated beside this one; a rule is never redefined, so a quotation made under rule 1 checks under
+rule 1 for as long as a host implements rule 1. A reader refuses a rule it does not implement
+(`version-unsupported`).
+
+A quotation that records **no** rule was made before this standard, under its host's own renderer, which
+this specification does not define. Only that host can check it, under the renderer it was made with; a
+host checking quotations from another host accepts only those that record a rule.
+
+### 10.2 Numbers
+
+A quantity shown with `fractionDigits` *n*:
+
+1. **Rounding.** The decimal value (§3.3) is rounded to *n* places **half away from zero**, exactly, in
+   decimal: `2.345` at 2 is `2.35`, `-2.345` is `-2.35`, `2.344999` is `2.34`. No binary floating point is
+   involved at any step.
+2. **Digits.** The integer part in ASCII digits with no leading zero (`0` when it is zero); then, when *n*
+   is above zero, `.` and exactly *n* digits, padded with zeros (`7` at 2 is `7.00`).
+3. **Grouping.** When the format's `grouping` is true, an integer part of four or more digits is split
+   into groups of three from the right, joined by `,` (`1,234,567.89`). The fraction is never grouped.
+   Grouping applies after rounding, so `999.5` at 0 is `1,000`.
+4. **Sign.** `-` (U+002D) before everything else when the rounded value is below zero. A value that rounds
+   to zero has no sign (`-0.4` at 0 is `0`).
+
+### 10.3 The styles
+
+| `style` | Text |
+|---|---|
+| `verbatim` | the decimal text exactly as carried, its scale included (`412000.00`) |
+| `number` | the value under §10.2 |
+| `percent` | the value × 100 under §10.2, then `%` with no space (`0.12345` at 1 is `12.3%`). The value is read as a ratio whatever the metric's unit says |
+| `currency` | the sign, then the currency's prefix (§10.4), then the value under §10.2, then, for a prefixed unit, the prefix's symbol: `-1234.5` in `[GBP]` at 0 is `-£1,235`; `12.5` in `k[GBP]` at 2 is `£12.50k` |
+
+A negative currency figure is written with a leading `-`, **never in parentheses**. A currency figure
+shows exactly `fractionDigits` digits: there is no per-currency default precision, so `412380` in `[GBP]`
+at 2 is `£412,380.00` and at 0 is `£412,380`.
+
+### 10.4 Currency prefixes
+
+The prefix of a currency is its symbol in this table, or, for a code the table does not hold, the code
+followed by one space (`CHF 1,299`). The table is the whole mapping and reads no locale data.
+
+| Code | Prefix | Code | Prefix | Code | Prefix |
+|---|---|---|---|---|---|
+| `AUD` | `A$` | `HKD` | `HK$` | `MXN` | `MX$` |
+| `BRL` | `R$` | `ILS` | `₪` | `NZD` | `NZ$` |
+| `CAD` | `CA$` | `INR` | `₹` | `PHP` | `₱` |
+| `CNY` | `CN¥` | `JPY` | `¥` | `TWD` | `NT$` |
+| `EUR` | `€` | `KRW` | `₩` | `USD` | `$` |
+| `GBP` | `£` | | | `VND` | `₫` |
+
+### 10.5 Values
+
+| `kind` | Text, each quantity under §10.3 |
+|---|---|
+| `scalar` | the quantity |
+| `interval` | low, ` to `, high (`1.01 to 2.00`) |
+| `series` | `series `, then the address as carried; the locator is not shown |
+| `distribution` | each bucket as key, `: `, quantity, in ascending ordinal key order (§3.1 rule 4), joined by `; ` |
+| `categorical` | the value |
+| `absent` | `absent (`, the reason, `)` |
+
+With no metric definition, every quantity is shown `verbatim`.
+
+### 10.6 The rendered-value document
+
+A `renderedValue` states one rendering, so that hosts can certify against it:
+
+| # | Member | Type |
+|---|---|---|
+| 1 | `kind` | `"renderedValue"` |
+| 2 | `wireVersion` | `1` |
+| 3 | `rule` | integer, the rendering rule (§10.1) |
+| 4 | `metric` | a metric definition (§7.1), or `null` for none |
+| 5 | `value` | a FactValue (§5.3) |
+| 6 | `text` | string |
+
+A reader renders `value` under `metric` by the rule `rule` names and refuses a document whose `text`
+differs (`rendering-mismatch`). The corpus's `rendering` family pins every rule above.
 
 ---
 
@@ -665,6 +823,9 @@ Ordered by how often each is the thing that is wrong.
 7. `supersedes` is the lineage head **at acceptance**, derived by the accepting host (§5.9, §6.3).
 8. A series' `locator` is **not** identity (§5.3).
 9. Disclosure labels are carried, never enforced by a reader (§5.8).
+10. The lineage key is **joined by `|`**, not framed, and its digest is over the key's UTF-8 bytes (§6.1).
+11. A rendering's glyphs are **fixed**: `.`, `,`, `%` with no space, `-` before a currency prefix, and the
+    prefix from §10.4's table — never the reader's locale (§10).
 
 ## Appendix B — non-normative: the resident emitter
 

@@ -14,9 +14,11 @@ fact.mjs        the resident reader, writer, identity frame and laws, written fr
 emit.mjs        builds every document and manifest.json from unsorted input models, and compares bytes
 validate.mjs    index, schema, kind, relation and law checks — what an emitter cannot ask of itself
 identity/       the frame: what is in a fact's id and what is not (L2)
+lineage/        the lineage key and its digest, one fact of each value kind and method (§6.1)
 record/         the encoding and the reader's refusals; one forward-compatibility vector
 definition/     metric and subject definitions as data
 registry/       the documents two deployments compare before exchanging facts
+rendering/      the rendering standard, rule 1 (§10)
 history/        L1 append-only, L2 inside a history, L3 supersession shape
 view/           L4 as-of visibility
 status/         forecastness and freshness, derived
@@ -33,8 +35,8 @@ humans, LF-terminated, and not a specified document.
 ## Certifying
 
 1. For every vector, do what its `kind` says (§9.1): `round-trip`, `hash` (recompute the `digest` as
-   §9.2 says for its family), `reject` (for the named `rejectClass`, and no other), or `accept` (read as
-   the vector named by `sameAs`).
+   §9.2 says for its family, and a `lineage` vector's `lineageKey`), `reject` (for the named
+   `rejectClass`, and no other), or `accept` (read as the vector named by `sameAs`).
 2. Check every entry of `relations` (§9.3): ids equal or distinct, histories extending or not.
 3. **Assert that the number of vectors you executed equals the number the manifest lists**, and prove
    once that a mutated document makes your harness go red. A green run that executed nothing looks

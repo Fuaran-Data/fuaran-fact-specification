@@ -7,6 +7,7 @@
 //   3. Kinds    — round-trip and hash vectors read and re-encode to their own bytes; hash digests
 //                 recompute (§9.2); accept vectors read, ignoring what they do not know; reject
 //                 vectors are refused FOR THE CLASS the manifest names, and for no other.
+//                 A lineage vector's lineageKey recomputes too (§6.1).
 //   4. Relations — the identity pairs (equal / distinct ids) and the L1 snapshot pairs hold.
 //   5. Laws     — each of L1–L4 is pinned by at least one positive and one negative vector.
 //
@@ -180,9 +181,10 @@ export function check(root) {
       if (reencoded !== bytes.toString("utf8")) bad.push(`${v.id}: does not re-encode to its own bytes`);
     }
     if (v.kind === "hash") {
-      const digest = v.family === "identity" ? F.factId(r.value) : F.definitionDigest(bytes);
+      const digest = v.family === "identity" ? F.factId(r.value) : v.family === "lineage" ? F.lineageDigest(r.value) : F.definitionDigest(bytes);
       if (digest !== v.digest) bad.push(`${v.id}: digest ${v.digest} does not recompute (${digest})`);
     }
+    if (v.family === "lineage" && v.lineageKey !== F.lineageKey(r.value)) bad.push(`${v.id}: lineageKey does not recompute (${F.lineageKey(r.value)})`);
   }
 
   // 4. relations

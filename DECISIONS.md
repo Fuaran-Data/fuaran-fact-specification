@@ -114,3 +114,94 @@ token, and a fact whose metric resolves in a registry names a token.
 **(16) The fact id is bare hex.** 64 lower-case hex digits, no `sha256:` prefix, as ids are already
 held. A series address, an input in content-hash form and the definition digest carry the prefix; a fact
 id does not, and the specification never needs to tell them apart by prefix alone.
+
+## D2 — Revision 1.1: a host with stored facts adopts without migrating them, and one rendering is the standard (Phase 35, 2026-11-16)
+
+A host whose stores already held facts was to adopt the reference package for this text. A probe run at that host
+found its fact ids equal to this text's on every case, and four things that were not: the lineage key, the saved
+shape of a value and an instant, a series address, and the rendering of numbers. Three operator rulings settled
+them (2026-11-15): a host's stored facts do not change to adopt the kernel; the reference package's rendering is
+the standard for every host; and the package's metric definition type carries the host's recompute policy. This
+entry records what each did to this text. Each is classed as a **wire change** (what a valid document is moves) or
+a **reader's tolerance** (an implementation reads something that is not a document of this text).
+
+**(1) The lineage key is the `|`-joined form stores hold (§6.1). Not a wire change.** No document carries a lineage
+key: §6.1 defined lineage membership as four renderings compared member for member, and the reference package
+framed them as §4.1 frames an id. A store that keeps one head per lineage indexes it by a digest of the key, so the
+key's bytes are a compatibility surface, and the form stores already hold is the four renderings joined by `|`. The
+text now states that form, with the lineage digest (SHA-256 over the key's UTF-8 bytes) beside it, and the new
+`lineage` corpus family pins both for seven facts, one per value kind and method.
+*`|` inside a field.* The joined form does not escape its separator, so it can collide: subject `area/west` with
+metric `revenue|net` and subject `area/west|revenue` with metric `net` share a key. The ruling was to refuse the
+field rather than change the key's bytes, so §3.5 refuses `|` in a hierarchy, a path member and a metric id
+(`token-invalid`). That is the minimum: the period rendering has a fixed length and no `|`, and the method identity
+is the last field, so a method's members keep `|`. This **narrows** what a valid fact is. §8 admits that inside a
+version for something accepted by mistake, and a fact with `|` in one of those fields was: its lineage could not be
+told apart from another's by the key every store indexes. No id of any other fact moves.
+*Alternatives.* (a) Keep the framed key: every head a store already indexes would be orphaned, which ruling 1
+forbids. (b) Escape `|` inside fields: changes the key's bytes for exactly the facts that carry one, and a store
+cannot tell which of its keys were written escaped.
+
+**(2) A series address may be an opaque host key (§5.3). A wire change, additive.** D1 ruling 3 made a series a
+Core content address with an optional locator. A store that named its series by its own data version key before
+content addresses existed holds `humanAsserted` series facts whose ids hash `series:` and that key. Ruling 1 keeps
+them, so the address is now one of two forms told apart by text alone: a content address, or a **host key**, any
+other non-empty string that is not in §4.5's content-hash form and does not begin with `sha256:`. The exclusions
+keep a malformed content address (`sha1:…`, a truncated digest) refused rather than read as a key, which is why
+`record/reject-series-address` still holds and `record/reject-series-address-truncated` joins it. Every document
+valid before is valid and reads the same, so this is additive under §8; a reader of the earlier text refuses a
+host-key series, which is the forward-compatibility cost of any widening.
+*Alternative.* A separate member beside `address`: a new required member is breaking (§8), and two members that
+cannot both be set are a worse shape than one member with two forms.
+
+**(3) The saved shape is a reader's tolerance, not the wire.** The host's stores keep a fact as its own serialiser
+wrote it: a scalar as a JSON number, an instant as an ISO date with or without `Z`. Ruling 1 has the reference
+package read that shape. This text is unchanged by it: the legacy shape is not a document of this specification,
+is read by one implementation for its hosts' sake, and is never written. Nothing here describes it, so that no
+second implementation takes it for part of the wire.
+
+**(4) The rendering standard, rule 1 (§10). New: a statement, a document kind, a reject class and a corpus
+family.** §1 put presentation out of scope and §7.1 left the glyphs to the reader's locale. Ruling 2 makes one
+rendering the standard for every host, so that a number quoted in a narrative and checked against the facts it
+cites checks the same way on every host that exchanges such checks. The decisions taken inside that ruling, each
+for the long term:
+
+- *Negative currency* is `-£1,235`, the sign before the prefix. Accounting parentheses are a layout idiom, they read
+  as an aside inside prose, and a quotation checker would have to know that `(£1,235)` is a number.
+- *Percent* is `12.3%` with no space, as English prose writes it.
+- *Grouping* is `,` every three digits of the integer part only, applied after rounding; the decimal separator is
+  `.`.
+- *Glyphs are fixed.* The sentence leaving separators and symbols to the reader's locale is withdrawn: a localised
+  form is a display, and §10 says it is never what a host compares.
+- *Rounding* is half away from zero in exact decimal arithmetic, as §7.1 already said.
+- *Currency prefixes* are a table of seventeen codes with a code-and-space fallback, read from no locale data.
+- *A prefixed currency unit* shows its prefix after the number (`£12.50k` for `12.5` in `k[GBP]`). Showing `£12.50`
+  would misstate the amount by the prefix's factor.
+- *Fraction digits are the format's, never the currency's.* A currency figure shows exactly `fractionDigits` digits;
+  there is no per-currency default precision. That is the rule a located currency figure already follows elsewhere
+  in this family of specifications, where a declared digit count is honoured exactly, so the two do not fork.
+- *Percent reads its value as a ratio* whatever the unit, which is how stored formats already behaved. A metric whose
+  unit is `%` and whose values are already percentages should use `number`.
+- *Units* are Core's admitted subset, listed in §7.2. **Bytes** are a count: Core admits no unit of information, so a
+  metric that counts bytes declares `1` and says so in its `context`. When Core admits a byte unit, declaring it is a
+  change to that metric's definition.
+- *A rule version.* §10.1 defines rendering rule 1, recorded by any record that keeps a rendering for later checking,
+  and never redefined. A quotation that records no rule predates the standard, and only the host whose renderer made
+  it can check it. The rule's version is separate from `wireVersion` because no document's bytes or id depend on it.
+
+The `renderedValue` document (§10.6) and the `rendering-mismatch` class let a host certify against the rule as it
+certifies against the laws (D1 ruling 11): a positive vector reads, a negative one is refused for its class.
+*Alternative.* Pin renderings only in each implementation's own tests, as the reference package did: two
+implementations would then agree only by accident, which is the failure the ruling exists to prevent.
+
+**(5) The recompute policy stays off the wire (D1 ruling 15 stands).** Ruling 3 gives the reference package's metric
+definition type a slot for the host's recompute policy, so that a host needs no second definition type. It is not a
+member here: what a host does when an input changes is that host's execution policy, two hosts may rightly differ on
+it, and if it were in the definition its digest (§7.5) would say they disagree on what a metric means when they do
+not.
+*Alternative.* A fourteenth member, optional on read: it would move every definition's digest, and make two
+deployments that schedule differently disagree about a metric's meaning.
+
+**Which revision.** These changes are revision 1.1 of version 1 (§8). The corpus moved with them: 44 vectors were
+added (an identity vector for a host-key series, seven lineage vectors, four record refusals and 32 rendering
+vectors), and no existing document's bytes or id changed.

@@ -56,7 +56,7 @@ const buckets = (pairs) => ({ kind: "distribution", buckets: new Map(pairs) });
 function chain(...facts) {
   const heads = new Map();
   return facts.map((f) => {
-    const key = F.frameText(F.lineageKey(f));
+    const key = F.lineageKey(f);
     const g = { ...f, supersedes: heads.has(key) ? heads.get(key).id : null };
     heads.set(key, g);
     return g;
@@ -112,6 +112,8 @@ const seriesNoHint = fact({ value: { kind: "series", address: addr("weekly-reven
 add("identity", "asserted-series", "hash", factBytes(seriesNoHint), { law: "L2" });
 const seriesHint = fact({ value: { kind: "series", address: addr("weekly-revenue-2026-q2"), locator: "objects/weekly-revenue@v14" }, metric: "revenue_weekly", method: asserted(), inputs: [] });
 add("identity", "asserted-series-locator", "hash", factBytes(seriesHint), { law: "L2" });
+const seriesHostKey = fact({ value: { kind: "series", address: "objects/weekly-revenue@v14", locator: null }, metric: "revenue_weekly", method: asserted(), inputs: [] });
+add("identity", "asserted-series-host-key", "hash", factBytes(seriesHostKey), { law: "L2" });
 const intervalFact = fact({ value: { kind: "interval", low: "0.42", high: "0.57" }, metric: "share_of_voice", method: asserted("analyst-panel"), inputs: [] });
 add("identity", "asserted-interval", "hash", factBytes(intervalFact), { law: "L2" });
 const categoricalFact = fact({ value: { kind: "categorical", value: "at risk" }, metric: "account_status", subject: { hierarchy: "customer", path: ["northwind"] }, method: asserted(), inputs: [] });
@@ -138,7 +140,26 @@ const relations = [
   { ids: "distinct", vectors: ["identity/asserted-scalar", "identity/asserted-scale-differs"], why: "decimal text is the value: 412000.0 and 412000.00 hash differently" },
   { ids: "distinct", vectors: ["identity/asserted-scalar", "identity/asserted-principal-differs"], why: "the principal is the method identity" },
   { ids: "equal", vectors: ["identity/asserted-series", "identity/asserted-series-locator"], why: "a series locator is a hint, never identity" },
+  { ids: "distinct", vectors: ["identity/asserted-series", "identity/asserted-series-host-key"], why: "a series address, content address or host key, is the asserted value (§4.4)" },
 ];
+
+// lineage — §6.1 the lineage key, one fact of each value kind and method; the digest is what a store
+// indexes a lineage by: the SHA-256 of the key's UTF-8 bytes.
+const lineageFact = (m) =>
+  fact({ subject: { hierarchy: "area", path: ["west", "harbour"] }, metric: "throughput", from: "2026-01-01T00:00:00Z", to: "2026-04-01T00:00:00Z", label: "Q1-2026", asOf: "2026-04-02T00:00:00Z", ...m });
+const lineageCases = [
+  ["computed-scalar", { value: scalar("1234.50"), method: computed("op.sum", "v1", "p0"), inputs: [addr("orders-2026-q1"), "run:7"] }],
+  ["asserted-scalar", { value: scalar("-0.125"), method: asserted("analyst-a"), inputs: [] }],
+  ["asserted-interval", { value: { kind: "interval", low: "1.0", high: "2.50" }, method: asserted("analyst-a"), inputs: ["x"] }],
+  ["asserted-distribution", { value: buckets([["p90", "3"], ["p10", "1.10"]]), method: asserted("analyst-b"), inputs: [] }],
+  ["asserted-series-host-key", { value: { kind: "series", address: "objects/throughput@v12", locator: null }, method: asserted("analyst-b"), inputs: [] }],
+  ["computed-series-host-key", { value: { kind: "series", address: "objects/throughput@v12", locator: null }, method: computed("op", "1", "h"), inputs: [] }],
+  ["imported-categorical", { value: { kind: "categorical", value: "red" }, method: imported("cert:9"), inputs: [] }],
+];
+for (const [name, m] of lineageCases) {
+  const f = lineageFact(m);
+  add("lineage", name, "hash", factBytes(f), { law: "L3", lineageKey: F.lineageKey(f) });
+}
 
 // record — the encoding and the reader's refusals, on the base fact's canonical text.
 const baseText = F.encode(F.factValueTree(base));
@@ -164,12 +185,16 @@ reject("record", "reject-instant-finer-than-tick", baseText, (t) => t.replace('"
 reject("record", "reject-instant-hour-24", baseText, (t) => t.replace('"asOf":"2026-07-02T06:00:00Z"', '"asOf":"2026-07-02T24:00:00Z"'), "instant-invalid");
 reject("record", "reject-hierarchy-slash", baseText, (t) => t.replace('"hierarchy":"product"', '"hierarchy":"product/line"'), "token-invalid");
 reject("record", "reject-path-angle", baseText, (t) => t.replace('"widget-x"', '"widget>x"'), "token-invalid");
+reject("record", "reject-hierarchy-pipe", baseText, (t) => t.replace('"hierarchy":"product"', '"hierarchy":"product|line"'), "token-invalid");
+reject("record", "reject-path-pipe", baseText, (t) => t.replace('"widget-x"', '"widget|x"'), "token-invalid");
+reject("record", "reject-metric-pipe", baseText, (t) => t.replace('"metric":"revenue"', '"metric":"revenue|net"'), "token-invalid");
 reject("record", "reject-path-empty-member", baseText, (t) => t.replace('"widget-x"', '""'), "shape-invalid");
 reject("record", "reject-operation-colon", baseText, (t) => t.replace('"operation":"rollup"', '"operation":"rollup:sum"'), "token-invalid");
 reject("record", "reject-period-inverted", baseText, (t) => t.replace('"from":"2026-04-01T00:00:00Z"', '"from":"2026-07-02T00:00:00Z"'), "period-inverted");
 reject("record", "reject-id-mismatch", baseText, (t) => t.replace(base.id, hex("not-this-fact")), "fact-id-mismatch", { law: "L2" });
 reject("record", "reject-id-uppercase", baseText, (t) => t.replace(base.id, base.id.toUpperCase()), "shape-invalid");
 reject("record", "reject-series-address", F.encode(F.factValueTree(seriesNoHint)), (t) => t.replace('"address":"sha256:', '"address":"sha1:'), "shape-invalid");
+reject("record", "reject-series-address-truncated", F.encode(F.factValueTree(seriesNoHint)), (t) => t.replace(seriesNoHint.value.address, "sha256:" + hex("weekly-revenue-2026-q2").slice(0, 63)), "shape-invalid");
 reject("record", "reject-interval-inverted", F.encode(F.factValueTree(intervalFact)), (t) => t.replace('"low":"0.42","high":"0.57"', '"low":"0.57","high":"0.42"'), "interval-inverted");
 reject("record", "reject-bucket-key", F.encode(F.factValueTree(assertedWithInputs)), (t) => t.replace('"p10":', '"p=10":'), "token-invalid");
 reject("record", "reject-escape-uppercase-hex", F.encode(F.factValueTree(fact({ value: { kind: "categorical", value: "a\u001fb" }, metric: "account_status", method: asserted(), inputs: [] }))), (t) => t.replace("\\u001f", "\\u001F"), "not-canonical");
@@ -236,6 +261,54 @@ add("registry", "subjects", "hash", enc(new F.Rec([["kind", "subjectRegistry"], 
 add("registry", "metrics-empty", "hash", enc(metricRegistryTree([])));
 reject("registry", "reject-unordered", F.encode(metricRegistryTree(metricRegistry)), () => F.encode(metricRegistryTree([...metricRegistry].reverse())), "registry-unordered");
 reject("registry", "reject-duplicate-id", F.encode(metricRegistryTree([revenueDef])), () => F.encode(metricRegistryTree([revenueDef, revenueDef])), "registry-unordered");
+
+// rendering — §10, the rendering standard, rule 1: a value shown as its metric declares.
+const fmt = (style, fractionDigits, grouping) => ({ style, fractionDigits, grouping });
+const renderMetric = (id, unit, displayFormat, dimensionality = "any") => metricDef({ id, name: id, unit, dimensionality, displayFormat });
+const gbp0 = renderMetric("gbp0", "[GBP]", fmt("currency", 0, true), "currency");
+const gbp2 = renderMetric("gbp2", "[GBP]", fmt("currency", 2, true), "currency");
+const chf0 = renderMetric("chf0", "[CHF]", fmt("currency", 0, true), "currency");
+const kgbp2 = renderMetric("kgbp2", "k[GBP]", fmt("currency", 2, true), "currency");
+const n2 = renderMetric("n2", "1", fmt("number", 2, true));
+const n0 = renderMetric("n0", "1", fmt("number", 0, true));
+const f0 = renderMetric("f0", "1", fmt("number", 0, false));
+const p1 = renderMetric("p1", "1", fmt("percent", 1, true));
+const verbatimGbp = renderMetric("verbatim", "[GBP]", fmt("verbatim", null, false), "currency");
+const renderedTree = (metric, value, text) => F.renderedValueTree({ rule: F.RENDERING_RULE, metric, value, text });
+const rendered = (name, metric, value) => add("rendering", name, "round-trip", enc(renderedTree(metric, value, F.renderValue(metric, value))));
+rendered("currency-grouped", gbp0, scalar("21240.00"));
+rendered("currency-negative", gbp0, scalar("-1234.5"));
+rendered("currency-rounds-to-zero-unsigned", gbp0, scalar("-0.4"));
+rendered("currency-fraction-digits", gbp2, scalar("412380"));
+rendered("currency-code-not-in-table", chf0, scalar("1299"));
+rendered("currency-prefixed-unit", kgbp2, scalar("12.5"));
+rendered("number-half-away-from-zero", n2, scalar("2.345"));
+rendered("number-half-away-from-zero-negative", n2, scalar("-2.345"));
+rendered("number-below-the-half", n2, scalar("2.344999"));
+rendered("number-grouped", n2, scalar("1234567.891"));
+rendered("number-rounding-opens-a-group", n0, scalar("999.5"));
+rendered("number-padded", n2, scalar("7"));
+rendered("number-ungrouped", f0, scalar("1234.5"));
+rendered("number-96-bit-bound", n2, scalar("79228162514264337593543950335"));
+rendered("number-28-places", n2, scalar("0.0000000000000000000000000001"));
+rendered("percent", p1, scalar("0.12345"));
+rendered("percent-negative", p1, scalar("-0.0456"));
+rendered("percent-grouped", p1, scalar("12.5"));
+rendered("verbatim-keeps-scale", verbatimGbp, scalar("412000.00"));
+rendered("no-metric-is-verbatim", null, scalar("412000.0"));
+rendered("interval", n2, { kind: "interval", low: "1.005", high: "2" });
+rendered("distribution-ordinal-order", n2, buckets([["b", "1"], ["B", "2"], ["a", "3"]]));
+rendered("categorical", n2, { kind: "categorical", value: "gold" });
+rendered("absent", n2, { kind: "absent", reason: "no data loaded" });
+rendered("series-content-address", n2, { kind: "series", address: addr("weekly-revenue-2026-q2"), locator: "objects/weekly-revenue@v14" });
+rendered("series-host-key", n2, { kind: "series", address: "objects/weekly-revenue@v14", locator: null });
+const renderedText = (metric, value) => F.encode(renderedTree(metric, value, F.renderValue(metric, value)));
+reject("rendering", "reject-currency-parentheses", renderedText(gbp0, scalar("-1234.5")), (t) => t.replace('"text":"-£1,235"', '"text":"(£1,235)"'), "rendering-mismatch");
+reject("rendering", "reject-generic-currency-sign", renderedText(gbp0, scalar("-1234.5")), (t) => t.replace('"text":"-£1,235"', '"text":"-¤1,235"'), "rendering-mismatch");
+reject("rendering", "reject-percent-space", renderedText(p1, scalar("0.12345")), (t) => t.replace('"text":"12.3%"', '"text":"12.3 %"'), "rendering-mismatch");
+reject("rendering", "reject-locale-glyphs", renderedText(n2, scalar("1234567.891")), (t) => t.replace('"text":"1,234,567.89"', '"text":"1.234.567,89"'), "rendering-mismatch");
+reject("rendering", "reject-half-to-even", renderedText(n2, scalar("2.345")), (t) => t.replace('"text":"2.35"', '"text":"2.34"'), "rendering-mismatch");
+reject("rendering", "reject-rule-2", renderedText(n2, scalar("2.345")), (t) => t.replace('"rule":1', '"rule":2'), "version-unsupported");
 
 // history — L1 append-only, L2 inside a history, L3 supersession shape.
 const t = (day, hour = "06") => `2026-07-${day}T${hour}:00:00Z`;
@@ -306,11 +379,12 @@ reject("status", "reject-superseded-fresh", statusText(l1, { kind: "untilSuperse
 // ── digests and the manifest ─────────────────────────────────────────────────────────────────
 const DIGESTS = {
   identity: (bytes) => F.readDocument(bytes).value.id,
+  lineage: (bytes) => F.lineageDigest(F.readDocument(bytes).value),
   definition: F.definitionDigest,
   registry: F.definitionDigest,
 };
 
-export const FAMILIES = ["identity", "record", "definition", "registry", "history", "view", "status"];
+export const FAMILIES = ["identity", "lineage", "record", "definition", "registry", "rendering", "history", "view", "status"];
 const SCHEMAS = {
   fact: "../schemas/v1/fact.schema.json",
   metricDefinition: "../schemas/v1/metric-definition.schema.json",
@@ -320,12 +394,14 @@ const SCHEMAS = {
   factHistory: "../schemas/v1/fact-history.schema.json",
   asOfView: "../schemas/v1/as-of-view.schema.json",
   factStatus: "../schemas/v1/fact-status.schema.json",
+  renderedValue: "../schemas/v1/rendered-value.schema.json",
 };
 
 function buildManifest() {
   const entries = vectors.map((v) => {
     const e = { id: v.id, family: v.family, kind: v.kind, file: v.file, sha256: F.sha256HexOfBytes(v.bytes) };
     if (v.kind === "hash") e.digest = DIGESTS[v.family](v.bytes);
+    if (v.lineageKey) e.lineageKey = v.lineageKey;
     if (v.rejectClass) e.rejectClass = v.rejectClass;
     if (v.law) e.law = v.law;
     if (v.interpretation) e.interpretation = v.interpretation;
@@ -341,11 +417,12 @@ function buildManifest() {
     laws: {
       L1: ["history"],
       L2: ["identity", "record", "history"],
-      L3: ["history"],
+      L3: ["lineage", "history"],
       L4: ["view"],
     },
     digests: {
       identity: "the fact id (§4): lower-case hex SHA-256 over the identity frame, recomputed from the document's own members",
+      lineage: "the lineage digest (§6.1): lower-case hex SHA-256 over the UTF-8 bytes of the lineage key, recomputed from the document's own members; the vector's lineageKey is the key itself",
       definition: "the definition digest (§7.5): sha256: + lower-case hex SHA-256 over the document's bytes",
       registry: "the definition digest (§7.5): sha256: + lower-case hex SHA-256 over the document's bytes",
     },

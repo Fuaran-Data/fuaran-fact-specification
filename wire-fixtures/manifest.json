@@ -4,9 +4,11 @@
   "scope": "whole-corpus",
   "families": [
     "identity",
+    "lineage",
     "record",
     "definition",
     "registry",
+    "rendering",
     "history",
     "view",
     "status"
@@ -22,6 +24,7 @@
       "history"
     ],
     "L3": [
+      "lineage",
       "history"
     ],
     "L4": [
@@ -30,6 +33,7 @@
   },
   "digests": {
     "identity": "the fact id (§4): lower-case hex SHA-256 over the identity frame, recomputed from the document's own members",
+    "lineage": "the lineage digest (§6.1): lower-case hex SHA-256 over the UTF-8 bytes of the lineage key, recomputed from the document's own members; the vector's lineageKey is the key itself",
     "definition": "the definition digest (§7.5): sha256: + lower-case hex SHA-256 over the document's bytes",
     "registry": "the definition digest (§7.5): sha256: + lower-case hex SHA-256 over the document's bytes"
   },
@@ -41,7 +45,8 @@
     "subjectRegistry": "../schemas/v1/subject-registry.schema.json",
     "factHistory": "../schemas/v1/fact-history.schema.json",
     "asOfView": "../schemas/v1/as-of-view.schema.json",
-    "factStatus": "../schemas/v1/fact-status.schema.json"
+    "factStatus": "../schemas/v1/fact-status.schema.json",
+    "renderedValue": "../schemas/v1/rendered-value.schema.json"
   },
   "rejectClasses": [
     "not-canonical",
@@ -64,7 +69,8 @@
     "supersedes-not-head",
     "supersedes-missing",
     "view-mismatch",
-    "status-mismatch"
+    "status-mismatch",
+    "rendering-mismatch"
   ],
   "relations": [
     {
@@ -146,6 +152,14 @@
         "identity/asserted-series-locator"
       ],
       "why": "a series locator is a hint, never identity"
+    },
+    {
+      "ids": "distinct",
+      "vectors": [
+        "identity/asserted-series",
+        "identity/asserted-series-host-key"
+      ],
+      "why": "a series address, content address or host key, is the asserted value (§4.4)"
     },
     {
       "history": "extends",
@@ -292,6 +306,15 @@
       "law": "L2"
     },
     {
+      "id": "identity/asserted-series-host-key",
+      "family": "identity",
+      "kind": "hash",
+      "file": "identity/asserted-series-host-key.json",
+      "sha256": "e516740724b4f47227a31d65ff416e0726aa1f3efcfb34c2ecf0a1d8e0378b5e",
+      "digest": "9f819c38e58e17ef480850d85f11aa16b058bf9d9eee31471e06dd078a12303f",
+      "law": "L2"
+    },
+    {
       "id": "identity/asserted-interval",
       "family": "identity",
       "kind": "hash",
@@ -353,6 +376,76 @@
       "sha256": "1d6e34aa7e5c13d00fce4fddd7b8342a25765287e799ba42f1a1557229b5dbe1",
       "digest": "3983a85f14f02f9e6b4b4ab6f5e7beff80b8c8b06afa13c6fa71b0c4e78ee8ad",
       "law": "L2"
+    },
+    {
+      "id": "lineage/computed-scalar",
+      "family": "lineage",
+      "kind": "hash",
+      "file": "lineage/computed-scalar.json",
+      "sha256": "cd8453d18476f6909460474c52d7d7a9abda6e4569f3570e25223a8f7f34b785",
+      "digest": "616a15e8366700435e619c0eb4e346eb90a52b23dc105083eb74c30e75b77a0c",
+      "lineageKey": "area/west>harbour|throughput|2026-01-01T00:00:00.0000000Z..2026-04-01T00:00:00.0000000Z|computed:op.sum:v1:p0",
+      "law": "L3"
+    },
+    {
+      "id": "lineage/asserted-scalar",
+      "family": "lineage",
+      "kind": "hash",
+      "file": "lineage/asserted-scalar.json",
+      "sha256": "a0a0658d9fee6a56824fb2d346b92afdbb383ac372160823b68c6ac5564e5f28",
+      "digest": "54d8acd458d129971a2c1d1ab82f52c6582f4d99179376e371195c5178c594be",
+      "lineageKey": "area/west>harbour|throughput|2026-01-01T00:00:00.0000000Z..2026-04-01T00:00:00.0000000Z|asserted:analyst-a",
+      "law": "L3"
+    },
+    {
+      "id": "lineage/asserted-interval",
+      "family": "lineage",
+      "kind": "hash",
+      "file": "lineage/asserted-interval.json",
+      "sha256": "c09588ea62cfa1c8131cc5efdb3829f4437fcd83b42f053492480fc2ceab06d8",
+      "digest": "54d8acd458d129971a2c1d1ab82f52c6582f4d99179376e371195c5178c594be",
+      "lineageKey": "area/west>harbour|throughput|2026-01-01T00:00:00.0000000Z..2026-04-01T00:00:00.0000000Z|asserted:analyst-a",
+      "law": "L3"
+    },
+    {
+      "id": "lineage/asserted-distribution",
+      "family": "lineage",
+      "kind": "hash",
+      "file": "lineage/asserted-distribution.json",
+      "sha256": "d53f26fc1da6bb4d4e979fc59e792be4bb7e010a30d7052ea924a1f7ac57937e",
+      "digest": "1af1995bb9a04d14f565534420972b630699e9c856e24a086bb1aa4ac487fd3a",
+      "lineageKey": "area/west>harbour|throughput|2026-01-01T00:00:00.0000000Z..2026-04-01T00:00:00.0000000Z|asserted:analyst-b",
+      "law": "L3"
+    },
+    {
+      "id": "lineage/asserted-series-host-key",
+      "family": "lineage",
+      "kind": "hash",
+      "file": "lineage/asserted-series-host-key.json",
+      "sha256": "44899c6c6e935799d552b143da9a6340832c66f9ac116426ebd8da924054ae08",
+      "digest": "1af1995bb9a04d14f565534420972b630699e9c856e24a086bb1aa4ac487fd3a",
+      "lineageKey": "area/west>harbour|throughput|2026-01-01T00:00:00.0000000Z..2026-04-01T00:00:00.0000000Z|asserted:analyst-b",
+      "law": "L3"
+    },
+    {
+      "id": "lineage/computed-series-host-key",
+      "family": "lineage",
+      "kind": "hash",
+      "file": "lineage/computed-series-host-key.json",
+      "sha256": "ac2fee961c521712a89a000372867804c356cbe8e124462760822a395346e072",
+      "digest": "031c40743b0efe931dfb9581ec5c3ffb47fb756214e45f1b4aa502dff87b5eab",
+      "lineageKey": "area/west>harbour|throughput|2026-01-01T00:00:00.0000000Z..2026-04-01T00:00:00.0000000Z|computed:op:1:h",
+      "law": "L3"
+    },
+    {
+      "id": "lineage/imported-categorical",
+      "family": "lineage",
+      "kind": "hash",
+      "file": "lineage/imported-categorical.json",
+      "sha256": "ca4de564c02aa1688355c47b2d1297296dba2d89ba43d433662d86d61acaf96b",
+      "digest": "ce4ef8e1bafe062bb2b350fb0544dca47974322cb157f728654fc9f2e5f71cb7",
+      "lineageKey": "area/west>harbour|throughput|2026-01-01T00:00:00.0000000Z..2026-04-01T00:00:00.0000000Z|imported:cert:9",
+      "law": "L3"
     },
     {
       "id": "record/reject-whitespace",
@@ -531,6 +624,30 @@
       "rejectClass": "token-invalid"
     },
     {
+      "id": "record/reject-hierarchy-pipe",
+      "family": "record",
+      "kind": "reject",
+      "file": "record/reject-hierarchy-pipe.json",
+      "sha256": "d8c5e5aad6478b02d1c4bd60c79665e9281357b3f86b726cbd53c09317792c8d",
+      "rejectClass": "token-invalid"
+    },
+    {
+      "id": "record/reject-path-pipe",
+      "family": "record",
+      "kind": "reject",
+      "file": "record/reject-path-pipe.json",
+      "sha256": "32327b35d33dcb842d1edcfe006b6dc78b8ecdb4ea45054eafb42dfb4b932f35",
+      "rejectClass": "token-invalid"
+    },
+    {
+      "id": "record/reject-metric-pipe",
+      "family": "record",
+      "kind": "reject",
+      "file": "record/reject-metric-pipe.json",
+      "sha256": "7b569c2cfeeca977c0c64427a9c131c56f9eb0edc3b60cc4bd43959693767b8c",
+      "rejectClass": "token-invalid"
+    },
+    {
       "id": "record/reject-path-empty-member",
       "family": "record",
       "kind": "reject",
@@ -577,6 +694,14 @@
       "kind": "reject",
       "file": "record/reject-series-address.json",
       "sha256": "e7325f47ea8782ccf62d31e0a3b1c2216204cb0a173743342987ad34dd9f8c0a",
+      "rejectClass": "shape-invalid"
+    },
+    {
+      "id": "record/reject-series-address-truncated",
+      "family": "record",
+      "kind": "reject",
+      "file": "record/reject-series-address-truncated.json",
+      "sha256": "e1cb919a659c3d73c475db00b0ed9450b42a1e3348a07c0699cf06a97b84252c",
       "rejectClass": "shape-invalid"
     },
     {
@@ -779,6 +904,236 @@
       "file": "registry/reject-duplicate-id.json",
       "sha256": "2ee0688f4fb2e953ab6f2c290788b920a6d11430e5a81837a1e8e83cccb84911",
       "rejectClass": "registry-unordered"
+    },
+    {
+      "id": "rendering/currency-grouped",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/currency-grouped.json",
+      "sha256": "2a2c637ca9356e543b7b4734ac1aeee6177ee8957f17b328559ce99ab9dacb95"
+    },
+    {
+      "id": "rendering/currency-negative",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/currency-negative.json",
+      "sha256": "04c113dca647d8ae149a4a6cdb9f1fdf11d75f4c9c1328b6aa5971df87623e01"
+    },
+    {
+      "id": "rendering/currency-rounds-to-zero-unsigned",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/currency-rounds-to-zero-unsigned.json",
+      "sha256": "44c246341c7079a74286c39ca521ac2efbb9a3ea237091e2602be539c06cad0e"
+    },
+    {
+      "id": "rendering/currency-fraction-digits",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/currency-fraction-digits.json",
+      "sha256": "f23f3984260660a30afb3b8c37b8fc3aeaccae53e908f015c9b60230657f2256"
+    },
+    {
+      "id": "rendering/currency-code-not-in-table",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/currency-code-not-in-table.json",
+      "sha256": "ddb659e27051ffe72bc734d97010abcd8e7c2d4a503805508980d782024fd2a1"
+    },
+    {
+      "id": "rendering/currency-prefixed-unit",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/currency-prefixed-unit.json",
+      "sha256": "0123935f6717adfdc7404ecb7ddde6f3f7128e72bcc3dacaea24eff1035491dc"
+    },
+    {
+      "id": "rendering/number-half-away-from-zero",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/number-half-away-from-zero.json",
+      "sha256": "894d63657af0edd1e236a53575417bf878cb7b350ce0acf979b01d23214a719a"
+    },
+    {
+      "id": "rendering/number-half-away-from-zero-negative",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/number-half-away-from-zero-negative.json",
+      "sha256": "9651eaf4d14e38a86eaabbe146c488064e07c21db240b95882b6f20c219e075f"
+    },
+    {
+      "id": "rendering/number-below-the-half",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/number-below-the-half.json",
+      "sha256": "ad477f352da20e1ddc62fe18e124273a065dcbcbec3bbb973566f3246dbaacdc"
+    },
+    {
+      "id": "rendering/number-grouped",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/number-grouped.json",
+      "sha256": "a67058503de6ba2adeeca0a4f4ec912dc6501832217bc2a62e3a86e597739eb8"
+    },
+    {
+      "id": "rendering/number-rounding-opens-a-group",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/number-rounding-opens-a-group.json",
+      "sha256": "4ef4780161e151c67e4fc06f7bd636f58f5aba23421b71aaca48e714cd3f4e17"
+    },
+    {
+      "id": "rendering/number-padded",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/number-padded.json",
+      "sha256": "1784207b243e0abc576726cac2d80c1f417b33f2b5a708d7a3e7b04fe0bd5493"
+    },
+    {
+      "id": "rendering/number-ungrouped",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/number-ungrouped.json",
+      "sha256": "bc219076e089052fd5810807a169d68e57407bcafea50722da4b3ece97907f51"
+    },
+    {
+      "id": "rendering/number-96-bit-bound",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/number-96-bit-bound.json",
+      "sha256": "7bbb1503d3810d53892246d4c6129cbe2833feb5234d4e8f91f21321d6003b57"
+    },
+    {
+      "id": "rendering/number-28-places",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/number-28-places.json",
+      "sha256": "5da3fd6f98f4478526f97f2f727a4576be613296170495d31f585289ee022911"
+    },
+    {
+      "id": "rendering/percent",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/percent.json",
+      "sha256": "b8779ac0835f7eeb87e1db3c6de5e9e66875e2210848ecbe8ebcc74992875283"
+    },
+    {
+      "id": "rendering/percent-negative",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/percent-negative.json",
+      "sha256": "1441db8ea6e11f1caf57fa3815aea1f002a9cfd7920552e5a66f071865ab21d8"
+    },
+    {
+      "id": "rendering/percent-grouped",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/percent-grouped.json",
+      "sha256": "928291166f7487e476ffca78cc5ad1e71302b5688caa2c126d26f9dba73180b2"
+    },
+    {
+      "id": "rendering/verbatim-keeps-scale",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/verbatim-keeps-scale.json",
+      "sha256": "10d54690476c9ed425679fba660a568664d3c6eb4a80cce2ee238967c08ede43"
+    },
+    {
+      "id": "rendering/no-metric-is-verbatim",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/no-metric-is-verbatim.json",
+      "sha256": "e8572dc01a47d6b78977d857646920cc7c775cbe64ea34dbe1ad0f52513a772f"
+    },
+    {
+      "id": "rendering/interval",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/interval.json",
+      "sha256": "875ff54147bb18610e39b094ad1ccd18bd6a624a5cbde90e1417e5edc4f2cf86"
+    },
+    {
+      "id": "rendering/distribution-ordinal-order",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/distribution-ordinal-order.json",
+      "sha256": "2b9a5d6e276a93c27d5f3abafb31d8f88df302f8b8dbe01bec95ff897168ae53"
+    },
+    {
+      "id": "rendering/categorical",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/categorical.json",
+      "sha256": "a52c7c0e2ac49832ea924f39bc65d426f9cdae0b23a350bcb18a5f1e75b9b04f"
+    },
+    {
+      "id": "rendering/absent",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/absent.json",
+      "sha256": "223ff3805e3f1772d6861c5b732d35d8acc2e64652db474d1e692885585fd161"
+    },
+    {
+      "id": "rendering/series-content-address",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/series-content-address.json",
+      "sha256": "cfd981096357dd724b4fc6f6981cd79624ccf7ab6d82f63c53474257582f0543"
+    },
+    {
+      "id": "rendering/series-host-key",
+      "family": "rendering",
+      "kind": "round-trip",
+      "file": "rendering/series-host-key.json",
+      "sha256": "656c759b2b596a19485245c6361f453d0e8751c519548f5be61123e2b7130405"
+    },
+    {
+      "id": "rendering/reject-currency-parentheses",
+      "family": "rendering",
+      "kind": "reject",
+      "file": "rendering/reject-currency-parentheses.json",
+      "sha256": "bc8616bb8c200e937bbf468211e0c234509a95a4002a0e40e93d509f40426e8d",
+      "rejectClass": "rendering-mismatch"
+    },
+    {
+      "id": "rendering/reject-generic-currency-sign",
+      "family": "rendering",
+      "kind": "reject",
+      "file": "rendering/reject-generic-currency-sign.json",
+      "sha256": "84e52eee51b74a97df10fd1e43c4350a28436e81ca06980fb7ad3a7b83fbeffc",
+      "rejectClass": "rendering-mismatch"
+    },
+    {
+      "id": "rendering/reject-percent-space",
+      "family": "rendering",
+      "kind": "reject",
+      "file": "rendering/reject-percent-space.json",
+      "sha256": "bd64d3c55322be89d1fd04d7161c3179c1f0e8006555e6f4d55224c6006bcd0e",
+      "rejectClass": "rendering-mismatch"
+    },
+    {
+      "id": "rendering/reject-locale-glyphs",
+      "family": "rendering",
+      "kind": "reject",
+      "file": "rendering/reject-locale-glyphs.json",
+      "sha256": "a0bb1e0b86d82bd2c9df67a953376cde905179d088a4a0054f9f7aee7f1caf61",
+      "rejectClass": "rendering-mismatch"
+    },
+    {
+      "id": "rendering/reject-half-to-even",
+      "family": "rendering",
+      "kind": "reject",
+      "file": "rendering/reject-half-to-even.json",
+      "sha256": "172e41b8b79e99d64dac4caf7ea44e646912ca26f7c08c75bd6c59bb5a5b31f7",
+      "rejectClass": "rendering-mismatch"
+    },
+    {
+      "id": "rendering/reject-rule-2",
+      "family": "rendering",
+      "kind": "reject",
+      "file": "rendering/reject-rule-2.json",
+      "sha256": "93db0f41ca67e5fac476ceb02e1395ad298c0ea7878349eb67435c0a0c2ca257",
+      "rejectClass": "version-unsupported"
     },
     {
       "id": "history/lineage-and-competitors",
